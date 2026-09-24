@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>หน้าต่างแผนกการเงิน - JS1 Autowork</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<style>
+body { background-color: #f4f6f9; font-family: 'Segoe UI', Thonburi, Tahoma, sans-serif; }
+.section-header { padding: 6px 10px; border-radius: 6px 6px 0 0; border-left: 5px solid; font-weight: bold; margin-bottom: 0; display: flex; align-items: center; justify-content: space-between; }
+.header-wholesale { background-color: #e0f2fe; color: #0369a1; border-left-color: #0284c7; font-size: 0.95rem; margin-top: 15px; margin-bottom: 5px; }
+.header-ready { background-color: #d1e7dd; color: #0f5132; border-left-color: #198754; font-size: 0.95rem; }
+.header-waiting-main { background-color: #fff3cd; color: #664d03; border-left-color: #ffc107; margin-top: 15px; font-size: 0.95rem; }
+.table-shadow { box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+.table thead th { font-weight: 600; }
+.table-ready td, .table-ready th { padding: 3px 6px !important; font-size: 0.76rem !important; vertical-align: middle; }
+.table-compact td, .table-compact th { padding: 2px 4px !important; font-size: 0.68rem !important; vertical-align: middle; line-height: 1.1; }
+.row-paid { background-color: rgba(108, 117, 125, 0.08) !important; color: #6c757d !important; }
+.row-paid td { background-color: transparent !important; color: #6c757d !important; border-bottom: 1px solid #dee2e6; }
+.search-box-finance {
+    max-width: 200px;
+    position: relative;
+    border-radius: 50px;
+    background: #ffffff;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+    border: 1px solid #198754;
+    transition: all 0.2s ease-in-out;
+}
+.search-box-finance:focus-within {
+    border-color: #059669;
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.2);
+}
+.search-box-finance .input-group-text {
+    background: transparent;
+    border: none;
+    color: #198754;
+    font-size: 0.8rem;
+    padding-left: 12px;
+}
+.search-box-finance .form-control {
+    border: none;
+    background: transparent;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #0f172a;
+    box-shadow: none !important;
+}
+.search-box-finance .btn-clear {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 0.75rem;
+    padding-right: 12px;
+    transition: color 0.2s;
+    cursor: pointer;
+}
+.search-box-finance .btn-clear:hover {
+    color: #ef4444;
+}
+.btn-cute {
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border-radius: 4px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.btn-pay-action {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: none;
+    color: #ffffff;
+    padding: 2px 8px !important;
+    font-size: 0.72rem !important;
+}
+.btn-pay-action:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    color: #ffffff;
+}
+.btn-return-action {
+    background: linear-gradient(135deg, #f43f5e, #e11d48);
+    border: none;
+    color: #ffffff;
+    padding: 1px 6px !important;
+    font-size: 0.65rem !important;
+}
+.btn-return-action:hover {
+    background: linear-gradient(135deg, #e11d48, #be123c);
+    color: #ffffff;
+}
+.timer-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 3px 6px;
+    border-radius: 4px;
+    display: inline-block;
+}
+/* Timeline Chart Tracking Style */
+.tracking-timeline { position: relative; padding-left: 20px; border-left: 2px solid #0ea5e9; margin-left: 10px; }
+.tracking-step { position: relative; margin-bottom: 15px; }
+.tracking-step::before { content: ''; position: absolute; left: -26px; top: 2px; width: 10px; height: 10px; border-radius: 50%; background-color: #0ea5e9; border: 2px solid #fff; }
+.tracking-time { font-size: 0.68rem; color: #64748b; font-weight: bold; }
+.tracking-status { font-weight: 800; font-size: 0.82rem; color: #0f172a; }
+.tracking-person { font-size: 0.75rem; color: #15803d; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="container-fluid py-3">
+<div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+<h4 class="text-success mb-0 fw-bold" style="font-size: 1.25rem;">การจัดการชำระเงิน (แผนกการเงิน)</h4>
+<span id="liveClock" class="badge bg-dark text-light px-2 py-1 shadow-sm" style="font-size: 0.8rem;">กำลังโหลดเวลา...</span>
+</div>
+
+<!-- ตารางที่ 1: พร้อมรับชำระเงิน -->
+<div class="section-header header-ready">
+    <span>1. รายการพร้อมรับชำระเงิน (ส่งกุญแจและ Job แล้ว)</span>
+    <span id="badge-count-ready" class="badge bg-success text-white" style="font-size: 0.75rem;">0 รายการ</span>
+</div>
+<div class="d-flex align-items-center my-2 gap-2 flex-wrap">
+    <div class="input-group search-box-finance">
+        <span class="input-group-text">🔍</span>
+        <input type="text" id="search_ready_plate" class="form-control" placeholder="ค้นหาเลขทะเบียน..." oninput="filterReadyTable()" autocomplete="off">
+        <button class="btn-clear" type="button" onclick="clearReadySearch()">✕</button>
+    </div>
+    <!-- ปุ่มสำหรับเปิด Pop-up รายการรอชำระเกิน 1 ชั่วโมง -->
+    <button type="button" class="btn btn-danger btn-sm fw-bold px-3 py-1 shadow-sm" style="border-radius: 50px; font-size: 0.78rem;" onclick="openOverdueModal()">
+        ⏰ รายการรอชำระเกิน 1 ชั่วโมง <span id="badge-count-overdue" class="badge bg-light text-danger ms-1">0 รายการ</span>
+    </button>
+</div>
+<div class="table-responsive bg-white table-shadow mb-2 rounded-bottom">
+<table class="table table-hover table-ready align-middle text-center mb-0">
+<thead class="table-success text-dark border-bottom border-2 border-success">
+<tr>
+<th style="width: 5%;">ที่</th>
+<th style="width: 13%;">ทีมช่าง (CS)</th>
+<th style="width: 12%;">ทะเบียนรถ</th>
+<th style="width: 12%;">รุ่นรถ/ยี่ห้อ</th>
+<th style="width: 20%;">รายการที่ทำ</th>
+<th style="width: 10%;">สถานะซ่อม</th>
+<th style="width: 16%;">ระยะเวลาส่งรถ</th>
+<th style="width: 12%;">จัดการ (การเงิน)</th>
+</tr>
+</thead>
+<tbody id="tbody-ready"></tbody>
+</table>
+</div>
+
+<!-- ตารางที่ 2: รายการกำลังดำเนินการ (แยกตาม 4 ทีมช่าง) -->
+<div class="section-header header-waiting-main">
+    <span>2. รายการกำลังดำเนินการ (แยกตามทีมช่าง)</span>
+    <span id="badge-count-waiting-total" class="badge bg-warning text-dark" style="font-size: 0.75rem;">รวม 0 รายการ</span>
+</div>
+<div class="row gx-2 mt-1 mb-3">
+    <!-- ทีม 1 -->
+    <div class="col-lg-3 mb-2">
+        <div class="bg-warning text-dark text-center py-1 fw-bold rounded-top d-flex justify-content-between px-2" style="font-size: 0.72rem;">
+            <span>ทีม 1 ช่างญา</span>
+            <span id="badge-count-waiting-1">0 รายการ</span>
+        </div>
+        <div class="table-responsive bg-white table-shadow rounded-bottom border border-warning border-top-0">
+            <table class="table table-compact align-middle text-center mb-0">
+                <thead class="table-light text-secondary">
+                    <tr><th style="width:12%">ที่</th><th style="width:28%">ทะเบียน</th><th style="width:60%">รายการ</th></tr>
+                </thead>
+                <tbody id="tbody-waiting-1"></tbody>
+            </table>
+        </div>
+    </div>
+    <!-- ทีม 2 -->
+    <div class="col-lg-3 mb-2">
+        <div class="bg-warning text-dark text-center py-1 fw-bold rounded-top d-flex justify-content-between px-2" style="font-size: 0.72rem;">
+            <span>ทีม 2 ช่างเรศ</span>
+            <span id="badge-count-waiting-2">0 รายการ</span>
+        </div>
+        <div class="table-responsive bg-white table-shadow rounded-bottom border border-warning border-top-0">
+            <table class="table table-compact align-middle text-center mb-0">
+                <thead class="table-light text-secondary">
+                    <tr><th style="width:12%">ที่</th><th style="width:28%">ทะเบียน</th><th style="width:60%">รายการ</th></tr>
+                </thead>
+                <tbody id="tbody-waiting-2"></tbody>
+            </table>
+        </div>
+    </div>
+    <!-- ทีม 3 -->
+    <div class="col-lg-3 mb-2">
+        <div class="bg-warning text-dark text-center py-1 fw-bold rounded-top d-flex justify-content-between px-2" style="font-size: 0.72rem;">
+            <span>ทีม 3 ช่างเจตต์</span>
+            <span id="badge-count-waiting-3">0 รายการ</span>
+        </div>
+        <div class="table-responsive bg-white table-shadow rounded-bottom border border-warning border-top-0">
+            <table class="table table-compact align-middle text-center mb-0">
+                <thead class="table-light text-secondary">
+                    <tr><th style="width:12%">ที่</th><th style="width:28%">ทะเบียน</th><th style="width:60%">รายการ</th></tr>
+                </thead>
+                <tbody id="tbody-waiting-3"></tbody>
+            </table>
+        </div>
+    </div>
+    <!-- ทีม Subaru -->
+    <div class="col-lg-3 mb-2">
+        <div class="bg-primary text-white text-center py-1 fw-bold rounded-top d-flex justify-content-between px-2" style="font-size: 0.72rem;">
+            <span>ทีม Subaru</span>
+            <span id="badge-count-waiting-subaru">0 รายการ</span>
+        </div>
+        <div class="table-responsive bg-white table-shadow rounded-bottom border border-primary border-top-0">
+            <table class="table table-compact align-middle text-center mb-0">
+                <thead class="table-light text-secondary">
+                    <tr><th style="width:12%">ที่</th><th style="width:28%">ทะเบียน</th><th style="width:60%">รายการ</th></tr>
+                </thead>
+                <tbody id="tbody-waiting-subaru"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- ตารางค้าส่ง (แผนกการเงิน) -->
+<!-- ========================================== -->
+<div id="container-wholesale-finance" style="display: none;">
+    <div class="section-header header-wholesale">
+        <span>📦 รายการลูกค้าค้าส่งประจำวัน (แผนกการเงิน)</span>
+        <span id="badge-count-wholesale" class="badge bg-primary text-white" style="font-size: 0.75rem;">0 รายการ</span>
+    </div>
+    <div class="table-responsive bg-white table-shadow mb-3 rounded-bottom border border-info border-top-0">
+        <table class="table table-hover table-ready align-middle text-center mb-0">
+            <thead class="table-info text-dark">
+                <tr>
+                    <th style="width: 10%;">เวลาบันทึก</th>
+                    <th style="width: 10%;">ผู้รับเรื่อง</th>
+                    <th style="width: 18%;">ชื่อลูกค้า</th>
+                    <th style="width: 35%;">รายการที่สั่ง</th>
+                    <th style="width: 13%;">สถานะจากห้องอะไหล่</th>
+                    <th style="width: 14%;">จัดการ (การเงิน)</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-wholesale-finance"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ส่วนที่ 3: ปุ่มเปิด Pop-up รายการที่ชำระเงินเรียบร้อยแล้ว -->
+<div class="text-center my-4">
+    <button type="button" class="btn btn-secondary fw-bold px-4 py-2 shadow-sm" style="border-radius: 8px;" onclick="openPaidJobsModal()">
+        ✅ 3. ดูประวัติรายการที่ชำระเงินเรียบร้อยแล้ว (สรุปปิดงานวันนี้) <span id="badge-count-paid-btn" class="badge bg-light text-dark ms-2">0 รายการ</span>
+    </button>
+</div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODALS สำหรับการเงิน -->
+<!-- ========================================== -->
+<!-- Modal รายการพร้อมรับชำระเงินที่เกิน 1 ชั่วโมง -->
+<!-- Modal รายการพร้อมรับชำระเงินที่เกิน 1 ชั่วโมง -->
+<div class="modal fade text-dark" id="overdueJobsModal" tabindex="-1">
+<div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+<div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+<div class="modal-header bg-danger text-white py-2">
+<h5 class="modal-title fw-bold">⏰ รายการพร้อมรับชำระเงิน (ส่งรถเกิน 1 ชั่วโมง)</h5>
+<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body p-3">
+    <!-- 📌 นำช่องค้นหานี้มาวางไว้ใต้ modal-body ทันที -->
+    <div class="mb-2">
+        <div class="input-group search-box-finance" style="max-width: 250px;">
+            <span class="input-group-text">🔍</span>
+            <input type="text" id="search_overdue_plate" class="form-control" placeholder="ค้นหาเลขทะเบียน..." oninput="filterOverdueTable()" autocomplete="off">
+            <button class="btn-clear" type="button" onclick="clearOverdueSearch()">✕</button>
+        </div>
+    </div>
+    <div class="table-responsive bg-white table-shadow rounded">
+        <table class="table table-hover table-ready align-middle text-center mb-0">
+        <thead class="table-danger text-dark border-bottom border-2 border-danger">
+        <tr>
+        <th style="width: 5%;">ที่</th>
+        <th style="width: 13%;">ทีมช่าง (CS)</th>
+        <th style="width: 12%;">ทะเบียนรถ</th>
+        <th style="width: 12%;">รุ่นรถ/ยี่ห้อ</th>
+        <th style="width: 20%;">รายการที่ทำ</th>
+        <th style="width: 10%;">สถานะซ่อม</th>
+        <th style="width: 16%;">ระยะเวลาส่งรถ</th>
+        <th style="width: 12%;">จัดการ (การเงิน)</th>
+        </tr>
+        </thead>
+        <tbody id="tbody-overdue"></tbody>
+        </table>
+    </div>
+</div>
+<div class="modal-footer py-1">
+<button type="button" class="btn btn-secondary btn-sm px-4 fw-bold" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Modal รายการที่ชำระเงินเรียบร้อยแล้ว (สรุปปิดงานวันนี้) -->
+<div class="modal fade text-dark" id="paidJobsModal" tabindex="-1">
+<div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+<div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+<div class="modal-header bg-secondary text-white py-2">
+<h5 class="modal-title fw-bold">✅ รายการที่ชำระเงินเรียบร้อยแล้ว (สรุปปิดงานวันนี้)</h5>
+<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body p-3">
+<div class="row gx-2">
+    <!-- ทีม 1 (ชำระแล้ว) -->
+    <div class="col-lg-3 mb-2">
+        <div class="bg-secondary text-white text-center py-1 fw-bold rounded-top d-flex justify-content-between px-2" style="font-size: 0.72rem;">
+            <span>ทีม 1 ช่างญา</span>
+            <span id="badge-count-paid-1">0 รายการ</span>
+        </div>
+        <div class="table-responsive bg-white border border-secondary border-top-0">
+            <table class="table table-compact align-middle text-center mb-0">
+                <thead class="table-light text-secondary">
+                    <tr><th style="width:12%">ที่</th><th style="width:28%">ทะเบียน</th><th style="width:60%">รายการ</th></tr>
+                </thead>
+                <tbody id="tbody-paid-1"></tbody>
+            </table>
+        </div>
+    </div>
+    <!-- ทีม 2 (ชำระแล้ว) -->
+    <div class="col-lg-3 mb-2">
+        <div class="bg-secondary text-white text-center py-1 fw-bold rounded-top d-flex justify-content-between px-2" style="font-size: 0.72rem;">
+            <span>ทีม 2 ช่างเรศ</span>
+            <span id="badge-count-paid-2">0 รายการ</span>
+        </div>
+        <div class="table-responsive bg-white border border-secondary border-top-0">
+            <table class="table table-compact align-middle text-center mb-0">
+                <thead class="table-light text-secondary">
+                    <tr><th style="width:12%">ที่</th><th style="width:28%">ทะเบียน</th><th style="width:60%">รายการ</th></tr>
+                </thead>
+                <tbody id="tbody-paid-2"></tbody>
+            </table>
+        </div>
+    </div>
+    <!-- ทีม 3 (ชำระแล้ว) -->
+    <div class="col-lg-3 mb-2">
+        <div class="bg-secondary text-white text-center py-1 fw-bold rounded-top d-flex justify-content-between px-2" style="font-size: 0.72rem;">
+            <span>ทีม 3 ช่างเจตต์</span>
+            <span id="badge-count-paid-3">0 รายการ</span>
+        </div>
+        <div class="table-responsive bg-white border border-secondary border-top-0">
+            <table class="table table-compact align-middle text-center mb-0">
+                <thead class="table-light text-secondary">
+                    <tr><th style="width:12%">ที่</th><th style="width:28%">ทะเบียน</th><th style="width:60%">รายการ</th></tr>
+                </thead>
+                <tbody id="tbody-paid-3"></tbody>
+            </table>
+        </div>
+    </div>
+    <!-- ทีม Subaru (ชำระแล้ว) -->
+    <div class="col-lg-3 mb-2">
+        <div class="bg-secondary text-white text-center py-1 fw-bold rounded-top d-flex justify-content-between px-2" style="font-size: 0.72rem;">
+            <span>ทีม Subaru</span>
+            <span id="badge-count-paid-subaru">0 รายการ</span>
+        </div>
+        <div class="table-responsive bg-white border border-secondary border-top-0">
+            <table class="table table-compact align-middle text-center mb-0">
+                <thead class="table-light text-secondary">
+                    <tr><th style="width:12%">ที่</th><th style="width:28%">ทะเบียน</th><th style="width:60%">รายการ</th></tr>
+                </thead>
+                <tbody id="tbody-paid-subaru"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</div>
+<div class="modal-footer py-1">
+<button type="button" class="btn btn-secondary btn-sm px-4 fw-bold" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Modal ยืนยันการปิดงานค้าส่ง (การเงิน) -->
+<div class="modal fade text-dark" id="closeWholesaleModal" tabindex="-1">
+<div class="modal-dialog modal-sm modal-dialog-centered">
+<div class="modal-content border-0 shadow">
+<div class="modal-header bg-dark text-white py-2">
+<h6 class="modal-title fw-bold">🔒 ยืนยันการปิดงานค้าส่ง</h6>
+<button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body text-center py-3">
+<input type="hidden" id="close_wholesale_id">
+<p class="text-muted small mb-2">ลูกค้า: <span id="close_wholesale_customer" class="fw-bold text-dark">-</span></p>
+<div class="mb-3 text-start">
+<label class="form-label fw-bold small text-success">พนักงานการเงินผู้ปิดงาน (บังคับระบุ):</label>
+<select id="close_cashier_name_select" class="form-select form-select-sm fw-bold">
+    <option value="">-- เลือกชื่อพนักงานการเงิน --</option>
+    <option value="ยลดา">ยลดา</option>
+    <option value="ธีรนุส">ธีรนุส</option>
+    <option value="กวินนา">กวินนา</option>
+</select>
+</div>
+</div>
+<div class="modal-footer py-1">
+<button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">ยกเลิก</button>
+<button type="button" class="btn btn-dark btn-sm px-3 fw-bold" onclick="executeCloseWholesale()">ยืนยันปิดงาน</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Modal สำหรับดูประวัติ Tracking สถานะค้าส่ง -->
+<div class="modal fade" id="trackingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-info text-dark py-2">
+                <h5 class="modal-title fs-6 fw-bold">🚚 ประวัติสถานะการดำเนินงาน (Tracking)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div id="trackingTimelineArea" class="tracking-timeline"></div>
+            </div>
+            <div class="modal-footer py-1">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">ปิด</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal ยืนยันการรับชำระเงิน (ศูนย์บริการ) -->
+<div class="modal fade text-dark" id="confirmPayModal" tabindex="-1">
+<div class="modal-dialog modal-sm modal-dialog-centered">
+<div class="modal-content">
+<div class="modal-header bg-success text-white py-2">
+<h6 class="modal-title fw-bold">ยืนยันการรับชำระเงิน</h6>
+<button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body text-center py-3">
+<input type="hidden" id="pay_job_id">
+<p class="text-muted small mb-2">กรุณาตรวจสอบความถูกต้องก่อนกดยืนยัน</p>
+<div class="p-2 bg-light border rounded mb-2">
+<h6 class="text-secondary fw-bold mb-1" id="pay_car_model">-</h6>
+<h5 class="text-success fw-bold mb-0" id="pay_license_plate">-</h5>
+</div>
+<div class="mb-3 text-start">
+<label class="form-label fw-bold small text-success">ผู้รับชำระเงิน:</label>
+<select id="cashier_name_select" class="form-select form-select-sm fw-bold">
+    <option value="ยลดา">ยลดา</option>
+    <option value="ธีรนุส">ธีรนุส</option>
+    <option value="กวินนา">กวินนา</option>
+</select>
+</div>
+<p class="text-danger" style="font-size: 0.7rem;">ข้อมูลจะถูกย้ายไปตารางเสร็จสิ้นประจำวัน</p>
+</div>
+<div class="modal-footer py-1">
+<button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">ยกเลิก</button>
+<button type="button" class="btn btn-success btn-sm px-3 fw-bold" onclick="executePay()">ยืนยันรับเงิน</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Modal ระบุ / ดูและแก้ไขเหตุผลเมื่อส่งรถเกิน 30 นาที -->
+<div class="modal fade text-dark" id="addReasonModal" tabindex="-1">
+<div class="modal-dialog modal-sm modal-dialog-centered">
+<div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+<div class="modal-header bg-warning text-dark py-2">
+<h6 class="modal-title fw-bold" id="reason_modal_title">⚠️ ระบุเหตุผลการชำระเงินล่าช้า (>30 นาที)</h6>
+<button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body text-start py-3">
+<input type="hidden" id="reason_job_id">
+<p class="text-muted small mb-2">ทะเบียน: <span id="reason_plate" class="fw-bold text-dark"></span></p>
+<label class="form-label fw-bold small text-dark">เหตุผลการชำระเงินล่าช้า <span class="text-danger">*</span>:</label>
+<textarea id="reason_input_text" class="form-control form-control-sm mb-2" rows="3" placeholder="ระบุเหตุผล เช่น รอลูกค้าโอนเงิน, ติดต่อลูกค้ายังไม่ได้..."></textarea>
+</div>
+<div class="modal-footer py-1">
+<button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">ยกเลิก</button>
+<button type="button" class="btn btn-warning btn-sm px-3 fw-bold text-dark" onclick="executeSaveReason()">บันทึกเหตุผล</button>
+</div>
+</div>
+</div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+const confirmPayModal = new bootstrap.Modal(document.getElementById('confirmPayModal'));
+const addReasonModal = new bootstrap.Modal(document.getElementById('addReasonModal'));
+const closeWholesaleModal = new bootstrap.Modal(document.getElementById('closeWholesaleModal'));
+const paidJobsModal = new bootstrap.Modal(document.getElementById('paidJobsModal'));
+const overdueJobsModal = new bootstrap.Modal(document.getElementById('overdueJobsModal'));
+
+let globalJobsData = [];
+let globalWholesaleJobs = [];
+
+function updateClock() {
+    const now = new Date();
+    const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+    document.getElementById('liveClock').textContent = `🕒 ${now.toLocaleDateString('th-TH', options)}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+setInterval(updateRealtimeTimers, 1000);
+
+function loadJobs() {
+    const offset = 7 * 60 * 60 * 1000;
+    const todayStr = new Date(new Date().getTime() + offset).toISOString().split('T')[0];
+    fetch(`/api/jobs?date=${todayStr}`)
+        .then(res => res.json())
+        .then(data => {
+            globalJobsData = data.jobs || [];
+            renderFinancePage();
+        })
+        .catch(err => console.error("Error loading jobs:", err));
+}
+
+function loadWholesaleJobs() {
+    const offset = 7 * 60 * 60 * 1000;
+    const todayStr = new Date(new Date().getTime() + offset).toISOString().split('T')[0];
+    fetch(`/api/wholesale/jobs?date=${todayStr}`)
+        .then(res => res.json())
+        .then(data => {
+            globalWholesaleJobs = data.jobs || [];
+            renderWholesaleFinanceTable();
+        })
+        .catch(err => console.error("Error loading wholesale jobs:", err));
+}
+
+setInterval(() => {
+    loadJobs();
+    loadWholesaleJobs();
+}, 10000);
+
+loadJobs();
+loadWholesaleJobs();
+
+socket.on('data_updated', () => { 
+    loadJobs(); 
+    loadWholesaleJobs();
+});
+
+function openPaidJobsModal() {
+    paidJobsModal.show();
+}
+
+function openOverdueModal() {
+    overdueJobsModal.show();
+    setTimeout(() => {
+        filterOverdueTable();
+        const input = document.getElementById('search_overdue_plate');
+        if (input) input.focus();
+    }, 150);
+}
+
+function renderWholesaleFinanceTable() {
+    const container = document.getElementById('container-wholesale-finance');
+    const tbody = document.getElementById('tbody-wholesale-finance');
+    tbody.innerHTML = '';
+    if (!globalWholesaleJobs || globalWholesaleJobs.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+    container.style.display = 'block';
+    document.getElementById('badge-count-wholesale').innerText = `${globalWholesaleJobs.length} รายการ`;
+    
+    const offset = 7 * 60 * 60 * 1000;
+    const todayStr = new Date(new Date().getTime() + offset).toISOString().split('T')[0];
+    globalWholesaleJobs.forEach(job => {
+        let currentStatus = job.status || 'รอ';
+        let badgeColor = 'bg-secondary';
+        if (currentStatus === 'รอ') badgeColor = 'bg-secondary';
+        else if (currentStatus.includes('รับเรื่องแล้ว')) badgeColor = 'bg-info text-dark';
+        else if (currentStatus.includes('กำลังจัดอะไหล่')) badgeColor = 'bg-warning text-dark';
+        else if (currentStatus.includes('จัดเสร็จแล้ว')) badgeColor = 'bg-success';
+        else if (currentStatus.includes('ปิดงาน')) badgeColor = 'bg-dark text-white';
+        
+        let isReadyToClose = currentStatus.startsWith('จัดเสร็จแล้ว พร้อมส่งหน้าร้าน') || currentStatus.startsWith('จัดเสร็จแล้ว พร้อมส่งขนส่ง');
+        let isClosed = currentStatus.includes('ปิดงาน');
+        let actionBtnHtml = '';
+        
+        if (isClosed) {
+            let closedTimeText = '';
+            if (job.status && job.status.includes('ปิดงานแล้ว')) {
+                closedTimeText = job.status.replace('ปิดงานแล้ว', '').replace(/\(.*?\)/g, '').trim();
+            }
+            if (!closedTimeText && job.updated_at) {
+                const d = new Date(new Date(job.updated_at).getTime() + offset);
+                closedTimeText = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} น.`;
+            }
+            let timeDisplayHtml = closedTimeText ? `<br><small class="fw-normal text-light" style="font-size:0.6rem;">เวลาปิด ${closedTimeText}</small>` : '';
+            
+            const cashierName = job.cashier_name ? job.cashier_name.split(',')[0].trim() : 'การเงิน';
+            actionBtnHtml = `<span class="badge bg-dark text-white py-1 px-2" style="font-size:0.65rem;">ปิดงานแล้ว (${cashierName})${timeDisplayHtml}</span>`;
+        } else if (isReadyToClose) {
+            actionBtnHtml = `<button class="btn btn-sm btn-dark fw-bold w-100 py-1" style="font-size:0.7rem;" onclick="openCloseWholesaleModal(${job.id}, '${job.customer_name}')">✅ กดปิดงาน</button>`;
+        } else {
+            actionBtnHtml = `<span class="text-muted small" style="font-size:0.65rem;">รออะไหล่จัดเสร็จ</span>`;
+        }
+        
+        const isOverdueFromYesterday = job.created_date && job.created_date !== todayStr;
+        const yesterdayBadgeHtml = isOverdueFromYesterday ? '<br><span class="badge bg-primary-subtle text-primary border border-primary fw-bold" style="font-size:0.55rem;">งานค้างจากเมื่อวาน</span>' : '';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="fw-bold text-secondary">${job.created_time || '-'}</td>
+            <td class="fw-bold">${job.receiver}</td>
+            <td class="fw-bold text-dark">${job.customer_name}${yesterdayBadgeHtml}</td>
+            <td class="text-start">${job.order_details}</td>
+            <td>
+                <span class="badge ${badgeColor} shadow-sm" style="font-size:0.7rem;">${currentStatus}</span>
+                <div class="mt-1">
+                    <button class="btn btn-outline-primary btn-sm py-0 px-1" style="font-size:0.6rem;" onclick="openTrackingModal(${job.id})">🚚 Tracking ประวัติ</button>
+                </div>
+            </td>
+            <td>${actionBtnHtml}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function openCloseWholesaleModal(id, customerName) {
+    document.getElementById('close_wholesale_id').value = id;
+    document.getElementById('close_wholesale_customer').innerText = customerName;
+    document.getElementById('close_cashier_name_select').value = '';
+    closeWholesaleModal.show();
+}
+
+function executeCloseWholesale() {
+    const id = document.getElementById('close_wholesale_id').value;
+    const cashierName = document.getElementById('close_cashier_name_select').value;
+    if (!cashierName) {
+        alert("กรุณาเลือกชื่อพนักงานการเงินผู้ปิดงาน");
+        return;
+    }
+    fetch(`/api/wholesale/jobs/${id}/close`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cashier_name: cashierName })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            closeWholesaleModal.hide();
+            loadWholesaleJobs();
+        } else {
+            alert(data.error || "เกิดข้อผิดพลาดในการปิดงาน");
+        }
+    })
+    .catch(err => {
+        console.error("Error closing wholesale job:", err);
+        alert("เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์");
+    });
+}
+
+function openTrackingModal(id) {
+    fetch(`/api/wholesale/jobs/${id}/tracking`)
+        .then(res => res.json())
+        .then(data => {
+            const area = document.getElementById('trackingTimelineArea');
+            area.innerHTML = '';
+            let logs = data.tracking || [];
+            if (logs.length === 0) {
+                area.innerHTML = '<div class="text-muted small fw-bold py-2">ยังไม่มีประวัติการอัปเดตสถานะ</div>';
+            } else {
+                logs.forEach(item => {
+                    area.innerHTML += `
+                        <div class="tracking-step">
+                            <div class="tracking-time">${item.timestamp}</div>
+                            <div class="tracking-status">${item.status}</div>
+                            <div class="tracking-person">ผู้ดำเนินการ: ${item.person || '-'}</div>
+                        </div>
+                    `;
+                });
+            }
+            new bootstrap.Modal(document.getElementById('trackingModal')).show();
+        })
+        .catch(err => console.error("Error loading tracking logs:", err));
+}
+
+function renderFinancePage() {
+    document.getElementById('tbody-ready').innerHTML = '';
+    document.getElementById('tbody-overdue').innerHTML = '';
+    document.getElementById('tbody-waiting-1').innerHTML = '';
+    document.getElementById('tbody-waiting-2').innerHTML = '';
+    document.getElementById('tbody-waiting-3').innerHTML = '';
+    document.getElementById('tbody-waiting-subaru').innerHTML = '';
+    document.getElementById('tbody-paid-1').innerHTML = '';
+    document.getElementById('tbody-paid-2').innerHTML = '';
+    document.getElementById('tbody-paid-3').innerHTML = '';
+    document.getElementById('tbody-paid-subaru').innerHTML = '';
+    
+    let allReadyJobs = [];
+    let normalReadyJobs = [];
+    let overdueReadyJobs = [];
+    let waiting1 = [], waiting2 = [], waiting3 = [], waitingSubaru = [];
+    let paid1 = [], paid2 = [], paid3 = [], paidSubaru = [];
+    const offset = 7 * 60 * 60 * 1000;
+    const todayStr = new Date(new Date().getTime() + offset).toISOString().split('T')[0];
+    const now = new Date();
+    
+    globalJobsData.forEach(job => {
+        if (job.is_cancelled === 1) return;
+        const teamKey = String(job.team || '0');
+        
+        if (job.payment_status === 'ชำระเงินแล้ว') {
+            let paidDateStr = "";
+            const rawPaidTime = job.updated_at || job.delivered_at;
+            if (rawPaidTime) {
+                paidDateStr = new Date(new Date(rawPaidTime).getTime() + offset).toISOString().split('T')[0];
+            } else {
+                paidDateStr = job.promised_date || job.created_date;
+            }
+            if (paidDateStr === todayStr) {
+                if (teamKey === '1') paid1.push(job);
+                else if (teamKey === '2') paid2.push(job);
+                else if (teamKey === '3') paid3.push(job);
+                else if (teamKey === 'Subaru') paidSubaru.push(job);
+                else paid1.push(job);
+            }
+        } else if (job.is_delivered === 1) {
+            allReadyJobs.push(job);
+            
+            let isOver1Hour = false;
+            if (job.delivered_at && job.delivered_at !== 'null' && job.delivered_at !== '') {
+                const deliveredTime = new Date(job.delivered_at);
+                const diffMs = now - deliveredTime;
+                const totalSecs = Math.floor(diffMs / 1000);
+                if (totalSecs >= 3600) {
+                    isOver1Hour = true;
+                }
+            }
+            
+            if (isOver1Hour) {
+                overdueReadyJobs.push(job);
+            } else {
+                normalReadyJobs.push(job);
+            }
+        } else {
+            if (teamKey === '1') waiting1.push(job);
+            else if (teamKey === '2') waiting2.push(job);
+            else if (teamKey === '3') waiting3.push(job);
+            else if (teamKey === 'Subaru') waitingSubaru.push(job);
+            else waiting1.push(job);
+        }
+    });
+    
+    document.getElementById('badge-count-ready').innerText = `${allReadyJobs.length} รายการ`;
+    document.getElementById('badge-count-overdue').innerText = `${overdueReadyJobs.length} รายการ`;
+    
+    document.getElementById('badge-count-waiting-1').innerText = `${waiting1.length} รายการ`;
+    document.getElementById('badge-count-waiting-2').innerText = `${waiting2.length} รายการ`;
+    document.getElementById('badge-count-waiting-3').innerText = `${waiting3.length} รายการ`;
+    document.getElementById('badge-count-waiting-subaru').innerText = `${waitingSubaru.length} รายการ`;
+    const totalWaitingCount = waiting1.length + waiting2.length + waiting3.length + waitingSubaru.length;
+    document.getElementById('badge-count-waiting-total').innerText = `รวม ${totalWaitingCount} รายการ`;
+    
+    document.getElementById('badge-count-paid-1').innerText = `${paid1.length} รายการ`;
+    document.getElementById('badge-count-paid-2').innerText = `${paid2.length} รายการ`;
+    document.getElementById('badge-count-paid-3').innerText = `${paid3.length} รายการ`;
+    document.getElementById('badge-count-paid-subaru').innerText = `${paidSubaru.length} รายการ`;
+    const totalPaidCount = paid1.length + paid2.length + paid3.length + paidSubaru.length;
+    document.getElementById('badge-count-paid-btn').innerText = `${totalPaidCount} รายการ`;
+    
+    normalReadyJobs.forEach((job, index) => addRowToTable(job, 'tbody-ready', 'ready', index + 1));
+    if (normalReadyJobs.length === 0) showEmptyRow('tbody-ready', 8, "ไม่มีรถที่รอชำระเงิน (ไม่เกิน 1 ชม.)");
+    
+    overdueReadyJobs.forEach((job, index) => addRowToTable(job, 'tbody-overdue', 'ready', index + 1));
+    if (overdueReadyJobs.length === 0) showEmptyRow('tbody-overdue', 8, "ไม่มีรายการรอชำระเกิน 1 ชั่วโมง");
+    
+    waiting1.sort((a, b) => a.id - b.id).forEach((job, index) => addRowToWaitingTable(job, 'tbody-waiting-1', index + 1));
+    if (waiting1.length === 0) showEmptyRow('tbody-waiting-1', 3, "ไม่มีรายการ");
+    
+    waiting2.sort((a, b) => a.id - b.id).forEach((job, index) => addRowToWaitingTable(job, 'tbody-waiting-2', index + 1));
+    if (waiting2.length === 0) showEmptyRow('tbody-waiting-2', 3, "ไม่มีรายการ");
+    
+    waiting3.sort((a, b) => a.id - b.id).forEach((job, index) => addRowToWaitingTable(job, 'tbody-waiting-3', index + 1));
+    if (waiting3.length === 0) showEmptyRow('tbody-waiting-3', 3, "ไม่มีรายการ");
+    waitingSubaru.sort((a, b) => a.id - b.id).forEach((job, index) => addRowToWaitingTable(job, 'tbody-waiting-subaru', index + 1));
+    if (waitingSubaru.length === 0) showEmptyRow('tbody-waiting-subaru', 3, "ไม่มีรายการ");
+    
+    paid1.sort((a, b) => a.id - b.id).forEach((job, index) => addRowToPaidTable(job, 'tbody-paid-1', index + 1));
+    if (paid1.length === 0) showEmptyRow('tbody-paid-1', 3, "ไม่มีรายการ");
+    
+    paid2.sort((a, b) => a.id - b.id).forEach((job, index) => addRowToPaidTable(job, 'tbody-paid-2', index + 1));
+    if (paid2.length === 0) showEmptyRow('tbody-paid-2', 3, "ไม่มีรายการ");
+    
+    paid3.sort((a, b) => a.id - b.id).forEach((job, index) => addRowToPaidTable(job, 'tbody-paid-3', index + 1));
+    if (paid3.length === 0) showEmptyRow('tbody-paid-3', 3, "ไม่มีรายการ");
+    paidSubaru.sort((a, b) => a.id - b.id).forEach((job, index) => addRowToPaidTable(job, 'tbody-paid-subaru', index + 1));
+    if (paidSubaru.length === 0) showEmptyRow('tbody-paid-subaru', 3, "ไม่มีรายการ");
+    
+    updateRealtimeTimers();
+    filterReadyTable();
+    filterOverdueTable(); 
+}
+
+function filterReadyTable() {
+    const keyword = document.getElementById('search_ready_plate').value.trim().toLowerCase();
+    const tbody = document.getElementById('tbody-ready');
+    const rows = tbody.getElementsByTagName('tr');
+    for (let row of rows) {
+        if (row.cells.length <= 1) continue;
+        const licenseCell = row.cells[2];
+        if (licenseCell) {
+            const plateText = licenseCell.innerText.toLowerCase();
+            if (keyword === "" || plateText.includes(keyword)) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
+        }
+    }
+}
+
+function clearReadySearch() {
+    const input = document.getElementById('search_ready_plate');
+    if (input) {
+        input.value = '';
+        filterReadyTable();
+        input.focus();
+    }
+}
+function filterOverdueTable() {
+    const input = document.getElementById('search_overdue_plate');
+    if (!input) return;
+    const keyword = input.value.trim().toLowerCase();
+    const tbody = document.getElementById('tbody-overdue');
+    if (!tbody) return;
+
+    const rows = tbody.getElementsByTagName('tr');
+    for (let row of rows) {
+        // ข้ามแถวแจ้งเตือน "ไม่มีรายการ..."
+        if (row.cells.length <= 1) continue;
+
+        // ดึงข้อความจากทุกคอลัมน์ในแถวนั้นมาแปลงเป็นตัวพิมพ์เล็ก
+        const rowText = row.innerText.toLowerCase();
+
+        // ตรวจสอบว่าคำค้นหาตรงกับข้อความในแถวหรือไม่
+        if (keyword === "" || rowText.includes(keyword)) {
+            row.style.display = "";
+        } else {
+            row.style.display = "none";
+        }
+    }
+}
+
+function clearOverdueSearch() {
+    const input = document.getElementById('search_overdue_plate');
+    if (input) {
+        input.value = '';
+        filterOverdueTable();
+        input.focus();
+    }
+}
+function showEmptyRow(tbodyId, colspan, text) {
+    document.getElementById(tbodyId).innerHTML = `<tr><td colspan="${colspan}" class="text-muted py-2" style="font-size: 0.72rem;">${text}</td></tr>`;
+}
+
+function addRowToWaitingTable(job, targetBodyId, itemNo) {
+    const tr = document.createElement('tr');
+    const haskey = job.key_status === 1;
+    const hasJob = job.job_status === 1;
+    
+    const offset = 7 * 60 * 60 * 1000;
+    const todayStr = new Date(new Date().getTime() + offset).toISOString().split('T')[0];
+    const isOverdueFromYesterday = job.created_date && job.created_date !== todayStr;
+    const yesterdayBadgeHtml = isOverdueFromYesterday ? '<br><span class="text-primary fw-bold" style="font-size:0.55rem;">(งานค้างจากเมื่อวาน)</span>' : '';
+    let statusNote = '';
+    if (haskey && !hasJob) {
+        statusNote = '<br><span class="text-primary" style="font-size:0.55rem;">(ส่งกุญแจแล้ว)</span>';
+    } else if (!haskey && hasJob) {
+        statusNote = '<br><span class="text-warning text-dark" style="font-size:0.55rem;">(ส่ง Job แล้ว)</span>';
+    }
+    
+    tr.innerHTML = `
+        <td class="fw-bold text-muted" style="font-size:0.65rem;">${itemNo}</td>
+        <td class="fw-bold text-primary" style="font-size:0.7rem;">${job.license_plate}${yesterdayBadgeHtml}${statusNote}</td>
+        <td class="text-start" style="font-size:0.68rem;">${job.service_details}</td>
+    `;
+    document.getElementById(targetBodyId).appendChild(tr);
+}
+
+function addRowToPaidTable(job, targetBodyId, itemNo) {
+    const tr = document.createElement('tr');
+    tr.className = 'row-paid';
+    const cashierName = job.cashier_name ? job.cashier_name.split(',')[0].trim() : '';
+    const cashierBadge = cashierName ? `<br><span class="text-secondary fw-bold" style="font-size:0.55rem;">รับเงิน: ${cashierName}</span>` : '';
+    
+    const offset = 7 * 60 * 60 * 1000;
+    const todayStr = new Date(new Date().getTime() + offset).toISOString().split('T')[0];
+    const isOverdueFromYesterday = job.created_date && job.created_date !== todayStr;
+    const yesterdayBadgeHtml = isOverdueFromYesterday ? '<br><span class="text-primary fw-bold" style="font-size:0.55rem;">(งานค้างจากเมื่อวาน)</span>' : '';
+    tr.innerHTML = `
+        <td class="fw-bold text-muted" style="font-size:0.65rem;">${itemNo}</td>
+        <td class="fw-bold" style="font-size:0.7rem;">${job.license_plate}${yesterdayBadgeHtml}${cashierBadge}</td>
+        <td class="text-start" style="font-size:0.68rem;">${job.service_details}</td>
+    `;
+    document.getElementById(targetBodyId).appendChild(tr);
+}
+
+function addRowToTable(job, targetBodyId, type, itemNo) {
+    const tr = document.createElement('tr');
+    let statusHtml = "", actionHtml = "";
+    const teamNameRaw = !job.team || job.team === '0' || job.team === 'null' ? 'ยังไม่เลือก' : (job.team === 'Subaru' ? 'Subaru' : 'ทีม ' + job.team);
+    const receiverName = job.receiver ? job.receiver.replace('CS ', '') : '-';
+    const teamText = `${teamNameRaw} (${receiverName})`;
+    const offset = 7 * 60 * 60 * 1000;
+    const todayStr = new Date(new Date().getTime() + offset).toISOString().split('T')[0];
+    const isOverdueFromYesterday = job.created_date && job.created_date !== todayStr;
+    const yesterdayBadgeHtml = isOverdueFromYesterday ? '<br><span class="badge bg-primary-subtle text-primary border border-primary fw-bold" style="font-size:0.55rem;">งานค้างจากเมื่อวาน</span>' : '';
+    
+    if (type === 'ready') {
+        statusHtml = '<span class="badge bg-success px-2 py-1" style="font-size: 0.65rem;">พร้อมรับชำระ</span>';
+        actionHtml = `
+            <button class="btn btn-sm btn-cute btn-pay-action w-100 fw-bold mb-1" onclick="openConfirmPay(${job.id}, '${job.car_model}', '${job.license_plate}')">รับชำระเงิน</button>
+            <button class="btn btn-sm btn-cute btn-return-action w-100 fw-bold" onclick="undoDeliver(${job.id}, '${job.license_plate}')">ส่งคืนช่าง</button>
+        `;
+        tr.innerHTML = `
+            <td class="fw-bold text-success" style="font-size:0.7rem;">${itemNo}</td>
+            <td class="fw-bold text-success" style="font-size:0.7rem;">${teamText}</td>
+            <td class="fw-bold text-success" style="font-size: 0.8rem;">${job.license_plate}${yesterdayBadgeHtml}</td>
+            <td class="fw-bold">${job.car_model}</td>
+            <td class="text-start">${job.service_details}</td>
+            <td>${statusHtml}</td>
+            <td>
+                <div class="d-flex flex-column align-items-center gap-1">
+                    <span class="timer-badge bg-light text-dark border border-secondary" id="timer_display_${job.id}" data-delivered-at="${job.delivered_at || ''}">กำลังคำนวณ...</span>
+                    <div id="reason_btn_container_${job.id}"></div>
+                </div>
+            </td>
+            <td>${actionHtml}</td>
+        `;
+    }
+    document.getElementById(targetBodyId).appendChild(tr);
+}
+
+function updateRealtimeTimers() {
+    const now = new Date();
+    document.querySelectorAll('[id^="timer_display_"]').forEach(timerSpan => {
+        const deliveredAtRaw = timerSpan.getAttribute('data-delivered-at');
+        const jobId = timerSpan.id.replace('timer_display_', '');
+        const reasonContainer = document.getElementById(`reason_btn_container_${jobId}`);
+        const jobObj = globalJobsData.find(j => j.id == jobId);
+        
+        if (!deliveredAtRaw || deliveredAtRaw === 'null' || deliveredAtRaw === '') {
+            timerSpan.innerText = 'ส่งแล้ว (ไม่ระบุเวลา)';
+            return;
+        }
+        
+        const deliveredTime = new Date(deliveredAtRaw);
+        const diffMs = now - deliveredTime;
+        const totalSecs = Math.floor(diffMs / 1000);
+        
+        if (totalSecs < 0) {
+            timerSpan.innerText = 'ส่งแล้ว (0วิ)';
+            return;
+        }
+        
+        const hours = Math.floor(totalSecs / 3600);
+        const mins = Math.floor((totalSecs % 3600) / 60);
+        const secs = totalSecs % 60;
+        
+        let timeStr = 'ส่งแล้ว (';
+        if (hours > 0) timeStr += `${hours}ชม. `;
+        if (mins > 0 || hours > 0) timeStr += `${mins}น. `;
+        timeStr += `${secs}วิ)`;
+        
+        timerSpan.innerText = timeStr;
+        
+        const hasReasonRecorded = jobObj && jobObj.remarks && jobObj.remarks.includes('[ล่าช้า >30น.:');
+        
+        if (mins >= 30 || hours > 0) {
+            timerSpan.className = 'timer-badge bg-danger text-white fw-bold';
+            if (reasonContainer) {
+                const currentPlate = jobObj ? jobObj.license_plate : '';
+                if (!hasReasonRecorded) {
+                    reasonContainer.innerHTML = `<button class="btn btn-sm btn-warning text-dark fw-bold w-100 py-0 mt-1" style="font-size:0.6rem;" onclick="openReasonModal(${jobId}, '${currentPlate}')">⚠️ ใส่เหตุผล</button>`;
+                } else {
+                    reasonContainer.innerHTML = `<button class="btn btn-sm btn-info text-dark fw-bold w-100 py-0 mt-1" style="font-size:0.6rem;" onclick="openReasonModal(${jobId}, '${currentPlate}')">📋 ดู/แก้ไขเหตุผล</button>`;
+                }
+            }
+        // ค้นหาช่วงท้ายของฟังก์ชัน updateRealtimeTimers() แล้วแก้ให้เป็นแบบนี้:
+        } else {
+            timerSpan.className = 'timer-badge bg-success-subtle text-success border border-success fw-bold';
+            if (reasonContainer) {
+                reasonContainer.innerHTML = '';
+            }
+        }
+    });
+
+    // 📌 เพิ่ม 2 บรรทัดนี้ไว้ที่บรรทัดสุดท้ายก่อนปิดฟังก์ชัน updateRealtimeTimers
+    filterReadyTable();
+    filterOverdueTable();
+}
+
+function openReasonModal(id, licensePlate) {
+    document.getElementById('reason_job_id').value = id;
+    document.getElementById('reason_plate').innerText = licensePlate;
+    
+    const jobObj = globalJobsData.find(j => j.id == id);
+    let currentReasonText = '';
+    
+    if (jobObj && jobObj.remarks && jobObj.remarks.includes('[ล่าช้า >30น.:')) {
+        const match = jobObj.remarks.match(/\[ล่าช้า >30น.:\s*(.*?)\]/);
+        if (match && match[1]) {
+            currentReasonText = match[1];
+        }
+        document.getElementById('reason_modal_title').innerText = '📋 ดู / แก้ไขเหตุผลการชำระเงินล่าช้า';
+    } else {
+        document.getElementById('reason_modal_title').innerText = '⚠️ ระบุเหตุผลการชำระเงินล่าช้า (>30 นาที)';
+    }
+    
+    document.getElementById('reason_input_text').value = currentReasonText;
+    addReasonModal.show();
+}
+
+function executeSaveReason() {
+    const id = document.getElementById('reason_job_id').value;
+    const reasonText = document.getElementById('reason_input_text').value.trim();
+    if (!reasonText) {
+        alert("กรุณาระบุเหตุผลการชำระเงินล่าช้า");
+        return;
+    }
+    
+    const jobObj = globalJobsData.find(j => j.id == id);
+    let updatedRemarks = jobObj && jobObj.remarks ? jobObj.remarks : '';
+    
+    if (updatedRemarks.includes('[ล่าช้า >30น.:')) {
+        updatedRemarks = updatedRemarks.replace(/\[ล่าช้า >30น.:\s*.*?\]/g, `[ล่าช้า >30น.: ${reasonText}]`);
+    } else {
+        const formattedReason = `[ล่าช้า >30น.: ${reasonText}]`;
+        updatedRemarks = updatedRemarks && updatedRemarks !== '-' ? `${updatedRemarks} ${formattedReason}` : formattedReason;
+    }
+    
+    fetch(`/api/jobs/${id}/remarks`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ remarks: updatedRemarks })
+    })
+    .then(res => res.json())
+    .then(() => {
+        addReasonModal.hide();
+        loadJobs();
+    })
+    .catch(err => {
+        console.error("Error saving reason:", err);
+        alert("เกิดข้อผิดพลาดในการบันทึกเหตุผล");
+    });
+}
+
+function undoDeliver(id, licensePlate) {
+    if (confirm(`ยืนยันการส่งรายการ "${licensePlate}" กลับไปให้ช่าง ใช่หรือไม่? (สถานะการส่งรถจะถูกรีเซ็ต)`)) {
+        fetch(`/api/jobs/${id}/undeliver`, { method: 'PUT' })
+            .then(async res => {
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    loadJobs();
+                } else {
+                    alert("ไม่สามารถส่งรายการกลับได้: " + (data.error || ""));
+                }
+            })
+            .catch(err => {
+                console.error("Error undelivering job:", err);
+                alert("เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์");
+            });
+    }
+}
+
+function openConfirmPay(id, carModel, licensePlate) {
+    document.getElementById('pay_job_id').value = id;
+    document.getElementById('pay_car_model').innerText = carModel;
+    document.getElementById('pay_license_plate').innerText = `ทะเบียน: ${licensePlate}`;
+    confirmPayModal.show();
+}
+
+function executePay() {
+    const id = document.getElementById('pay_job_id').value;
+    const cashierName = document.getElementById('cashier_name_select').value;
+    
+    fetch(`/api/jobs/${id}/payment`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payment_status: 'ชำระเงินแล้ว', cashier_name: cashierName })
+    })
+    .then(res => res.json())
+    .then(data => {
+        confirmPayModal.hide();
+        if (overdueJobsModal) overdueJobsModal.hide();
+        loadJobs();
+    })
+    .catch(err => {
+        console.error("Error executing payment:", err);
+        alert("เกิดข้อผิดพลาดในการบันทึกการชำระเงิน");
+    });
+}
+</script>
+</body>
+</html>
+

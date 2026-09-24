@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>บันทึกรับรถเข้าบริการ - JS1 Autowork</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- SheetJS สำหรับ Export Excel -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- html2canvas สำหรับเซฟรายงานเป็นรูปภาพ -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<style>
+body { background-color: #e8f5e9; color: #0f5132; font-family: 'Segoe UI', Thonburi, Tahoma, sans-serif; }
+.card { border-radius: 15px; box-shadow: 0 8px 20px rgba(15, 81, 50, 0.1); border-top: 6px solid #198754; background-color: #ffffff; }
+.form-label { color: #145c32; font-weight: 700; font-size: 0.95rem; margin-bottom: 0.3rem; }
+.text-header { color: #0f5132; font-weight: 800; }
+.form-control, .form-select { border: 1px solid #a3cfbb; color: #0f5132; }
+.form-control:focus, .form-select:focus { border-color: #198754; box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25); }
+.form-control::placeholder { color: #8cb89f; }
+.cs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.team-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.btn-outline-custom { color: #198754; border-color: #198754; background-color: #fff; transition: all 0.25s ease-in-out; font-size: 0.9rem; }
+.btn-outline-custom:hover { background-color: #d1e7dd; color: #0f5132; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(25, 135, 84, 0.15); }
+.btn-check:checked + .btn-outline-warning { background-color: #ffc107; color: #000; border-color: #ffc107; font-weight: bold; }
+.btn-check:checked + .btn-outline-danger { background-color: #dc3545; color: #fff; border-color: #dc3545; font-weight: bold; }
+.form-container { max-width: 950px; margin: auto; }
+.clock-badge { background-color: #145c32; color: #fff; border: 2px solid #a3cfbb; }
+.btn-check:checked + .btn-outline-custom {
+    background-color: #198754 !important; color: white !important; border-color: #198754 !important;
+    box-shadow: 0 8px 18px rgba(25, 135, 84, 0.45) !important; transform: translateY(-3px) scale(1.02);
+}
+.btn-check:checked + .btn-outline-custom-team-subaru {
+    background-color: #1e40af !important; color: white !important; border-color: #1e40af !important;
+    box-shadow: 0 8px 18px rgba(30, 64, 175, 0.45) !important; transform: translateY(-3px) scale(1.02);
+}
+.btn-outline-custom-team-subaru { color: #1e40af; border-color: #1e40af; font-size: 0.75rem !important; padding: 0.375rem 0.2rem !important; }
+.btn-outline-custom-team-subaru:hover { background-color: #dbeafe; color: #1e3a8a; }
+.btn-check:checked + .btn-outline-custom-team-later {
+    background-color: #dc3545 !important; color: white !important; border-color: #dc3545 !important;
+    box-shadow: 0 8px 18px rgba(220, 53, 69, 0.45) !important; transform: translateY(-3px) scale(1.02);
+}
+.btn-outline-custom-team-later { font-size: 0.72rem !important; padding: 0.375rem 0.1rem !important; color: #dc3545; border-color: #dc3545; }
+.service-section {
+    background-color: #f8fbf9; border: 1px solid #c3e6cb; border-radius: 12px; padding: 16px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.02);
+}
+.btn-fast-service { font-size: 0.78rem; padding: 4px 10px; border-radius: 20px; font-weight: 700; }
+.plate-options-box { background-color: #f2f9f4; border: 1px solid #c8e6c9; border-radius: 8px; padding: 4px 8px; }
+.vip-options-box { background-color: #d1e7dd; border: 1px solid #a3cfbb; border-radius: 8px; padding: 4px 8px; }
+.plate-options-box .form-check-label, .vip-options-box .form-check-label { font-size: 0.78rem !important; }
+.plate-options-box .form-label, .vip-options-box .form-label { font-size: 0.72rem !important; margin-bottom: 2px !important; }
+.btn-quick-time { font-size: 0.72rem; padding: 2px 6px; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="container-fluid py-4 form-container">
+<div class="card p-4">
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h3 class="text-header mb-0">บันทึกรับรถเข้าบริการ JS1 Autowork</h3>
+    <div class="d-flex gap-2 align-items-center">
+        <!-- ปุ่มลูกค้าค้าส่ง -->
+        <button type="button" class="btn btn-outline-info btn-sm fw-bold shadow-sm text-dark" data-bs-toggle="modal" data-bs-target="#wholesaleModal">
+            📦 ลูกค้าค้าส่ง
+        </button>
+        <!-- ปุ่มรายงาน (เอาปุ่มสินค้าเบิกเฉพาะออกแล้ว) -->
+        <button type="button" class="btn btn-outline-primary btn-sm fw-bold shadow-sm ms-1" onclick="openNewCustomerReportModal()">
+            📊 รายงานลูกค้าใหม่
+        </button>
+        <button type="button" class="btn btn-outline-danger btn-sm fw-bold shadow-sm" onclick="openReworkReportModal()">
+            🛠️ รายงานงานแก้
+        </button>
+    </div>
+</div>
+<form id="jobForm">
+<div class="row gx-4">
+<!-- ================= คอลัมน์ซ้าย ================= -->
+<div class="col-md-6 border-end border-success border-opacity-25 pe-md-4">
+<div class="mb-3">
+<label class="form-label">1. ผู้รับรถ (CS)</label>
+<div class="cs-grid">
+<input type="radio" class="btn-check" name="receiver_cs" id="cs1" value="CS แอน" required>
+<label class="btn btn-outline-custom fw-bold py-2" for="cs1">แอน</label>
+<input type="radio" class="btn-check" name="receiver_cs" id="cs2" value="CS จ๋อม">
+<label class="btn btn-outline-custom fw-bold py-2" for="cs2">จ๋อม</label>
+<input type="radio" class="btn-check" name="receiver_cs" id="cs3" value="CS แตง">
+<label class="btn btn-outline-custom fw-bold py-2" for="cs3">แตง</label>
+<input type="radio" class="btn-check" name="receiver_cs" id="cs4" value="CS ตั๊ก">
+<label class="btn btn-outline-custom fw-bold py-2" for="cs4">ตั๊ก</label>
+<input type="radio" class="btn-check" name="receiver_cs" id="cs5" value="CS สา">
+<label class="btn btn-outline-custom fw-bold py-2" for="cs5">สา</label>
+<input type="radio" class="btn-check" name="receiver_cs" id="cs6" value="CS พีม">
+<label class="btn btn-outline-custom fw-bold py-2" for="cs6">พีม</label>
+</div>
+</div>
+<div class="mb-3">
+<label class="form-label">2. ช่างผู้ดูแล (เลือกทีม)</label>
+<div class="team-grid">
+<input type="radio" class="btn-check" name="team_select" id="team1" value="1" required>
+<label class="btn btn-outline-custom fw-bold py-2 px-1 text-center" for="team1">ทีม 1</label>
+<input type="radio" class="btn-check" name="team_select" id="team2" value="2">
+<label class="btn btn-outline-custom fw-bold py-2 px-1 text-center" for="team2">ทีม 2</label>
+<input type="radio" class="btn-check" name="team_select" id="team3" value="3">
+<label class="btn btn-outline-custom fw-bold py-2 px-1 text-center" for="team3">ทีม 3</label>
+<input type="radio" class="btn-check" name="team_select" id="team_subaru" value="Subaru">
+<label class="btn btn-outline-custom btn-outline-custom-team-subaru fw-bold text-center d-flex align-items-center justify-content-center" for="team_subaru">Subaru</label>
+<input type="radio" class="btn-check" name="team_select" id="team0" value="0">
+<label class="btn btn-outline-custom btn-outline-custom-team-later fw-bold text-center d-flex align-items-center justify-content-center" for="team0">ภายหลัง</label>
+</div>
+</div>
+<div class="mb-3">
+<label class="form-label">3. ทะเบียนรถ</label>
+<input type="text" id="license_plate" class="form-control form-control-sm fw-bold text-success mb-2" placeholder="เช่น กข 1234" required>
+<div class="row g-2">
+<div class="col-6">
+<div class="plate-options-box">
+<label class="form-label d-block text-success fw-bold mb-1">ประเภทป้าย</label>
+<div class="d-flex justify-content-between px-1">
+<div class="form-check mb-0">
+<input class="form-check-input border-success" type="radio" name="plate_type" id="plate_normal" value="ปกติ" checked>
+<label class="form-check-label fw-bold text-success" for="plate_normal">ปกติ</label>
+</div>
+<div class="form-check mb-0">
+<input class="form-check-input border-danger" type="radio" name="plate_type" id="plate_red" value="ป้ายแดง">
+<label class="form-check-label fw-bold text-danger" for="plate_red">ป้ายแดง</label>
+</div>
+<div class="form-check mb-0">
+<input class="form-check-input border-secondary" type="radio" name="plate_type" id="plate_none" value="ไม่มีทะเบียน">
+<label class="form-check-label fw-bold text-secondary" for="plate_none">ไม่มี</label>
+</div>
+</div>
+</div>
+</div>
+<div class="col-6">
+<div class="vip-options-box">
+<label class="form-label d-block text-dark fw-bold mb-1">สถานะลูกค้า</label>
+<div class="d-flex justify-content-around px-1">
+<div class="form-check mb-0">
+<input class="form-check-input border-dark" type="radio" name="vip_status" id="vip_no" value="ลูกค้าเก่า" checked onchange="toggleNewCustomerOptions(false)">
+<label class="form-check-label fw-bold text-dark" for="vip_no">ลูกค้าเก่า</label>
+</div>
+<div class="form-check mb-0">
+<input class="form-check-input border-success" type="radio" name="vip_status" id="vip_yes" value="ลูกค้าใหม่" onchange="toggleNewCustomerOptions(true)">
+<label class="form-check-label fw-bold text-success" for="vip_yes">ลูกค้าใหม่</label>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div id="newCustomerDetailsBox" class="mt-2 p-2 border border-success rounded bg-light" style="display: none; font-size: 0.8rem;">
+<label class="form-label text-success fw-bold mb-1" style="font-size: 0.8rem;">รู้จัก JS1 Autowork จากช่องทางใด:</label>
+<div class="row g-1">
+<div class="col-6"><div class="form-check"><input class="form-check-input" type="radio" name="new_cus_channel" value="Facebook" id="ch_fb"><label class="form-check-label" for="ch_fb">Facebook</label></div></div>
+<div class="col-6"><div class="form-check"><input class="form-check-input" type="radio" name="new_cus_channel" value="Google Search/แผนที่" id="ch_gg"><label class="form-check-label" for="ch_gg">Google Search/แผนที่</label></div></div>
+<div class="col-6"><div class="form-check"><input class="form-check-input" type="radio" name="new_cus_channel" value="Tiktok" id="ch_tt"><label class="form-check-label" for="ch_tt">Tiktok</label></div></div>
+<div class="col-6"><div class="form-check"><input class="form-check-input" type="radio" name="new_cus_channel" value="LINE Official" id="ch_line"><label class="form-check-label" for="ch_line">LINE Official</label></div></div>
+<div class="col-6"><div class="form-check"><input class="form-check-input" type="radio" name="new_cus_channel" value="เพื่อนหรือคนรู้จักแนะนำ" id="ch_friend"><label class="form-check-label" for="ch_friend">เพื่อนแนะนำ</label></div></div>
+<div class="col-6"><div class="form-check"><input class="form-check-input" type="radio" name="new_cus_channel" value="ผ่านหน้าร้าน" id="ch_shop"><label class="form-check-label" for="ch_shop">ผ่านหน้าร้าน</label></div></div>
+<div class="col-12"><div class="form-check"><input class="form-check-input" type="radio" name="new_cus_channel" value="รีวิวจาก / สื่อออนไลน์ /เพจรีวิว" id="ch_review"><label class="form-check-label" for="ch_review">รีวิวจาก / สื่อออนไลน์ / เพจรีวิว</label></div></div>
+<div class="col-12">
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="new_cus_channel" value="อื่น ๆ" id="ch_other" onchange="toggleOtherChannelInput(true)">
+        <label class="form-check-label" for="ch_other">อื่น ๆ (โปรดระบุ)</label>
+    </div>
+    <input type="text" id="new_cus_other_text" class="form-control form-control-sm mt-1" placeholder="ระบุข้อมูล..." style="display: none;">
+</div>
+</div>
+</div>
+</div>
+<div class="row g-2 mb-3">
+<div class="col-6">
+<label class="form-label">ยี่ห้อรถ</label>
+<input type="text" id="car_brand" class="form-control" list="brandList" placeholder="พิมพ์เพื่อค้นหา..." required autocomplete="off">
+<datalist id="brandList">
+<option value="Aion"><option value="Alfa Romeo"><option value="Aston Martin"><option value="Audi"><option value="AVATR">
+<option value="BAIC"><option value="Bentley"><option value="BMW"><option value="BYD">
+<option value="Changan"><option value="Chery"><option value="Chevrolet"><option value="Citroën">
+<option value="Daewoo"><option value="Daihatsu"><option value="Dodge"><option value="Datsun"><option value="Deepal"><option value="Dongfeng/Forthing">
+<option value="Ferrari"><option value="Fiat"><option value="Ford"><option value="Foton">
+<option value="GAC"><option value="Geely"><option value="GMC"><option value="Great Wall Motor (GWM)">
+<option value="Haval"><option value="Honda"><option value="Hyundai">
+<option value="Infiniti"><option value="Isuzu">
+<option value="Jaguar"><option value="Jeep"><option value="JAECOO">
+<option value="Kia">
+<option value="Lamborghini"><option value="Land Rover"><option value="Lexus"><option value="Lotus">
+<option value="Maserati"><option value="Mazda"><option value="McLaren"><option value="Mercedes-Benz"><option value="MG"><option value="MINI"><option value="Mitsubishi">
+<option value="NETA"><option value="Nissan">
+<option value="OMODA"><option value="Opel">
+<option value="Peugeot"><option value="Polestar"><option value="Porsche"><option value="Proton">
+<option value="RAM"><option value="Renault"><option value="Riddara"><option value="Rolls-Royce">
+<option value="Saab"><option value="SEAT"><option value="Škoda"><option value="Subaru"><option value="Suzuki">
+<option value="TATA"><option value="Tesla"><option value="Thairung / Thai Rung"><option value="Toyota">
+<option value="Volkswagen"><option value="Volvo">
+<option value="Wuling">
+<option value="XPeng">
+<option value="Zeekr">
+</datalist>
+</div>
+<div class="col-6">
+<label class="form-label">รุ่นรถ</label>
+<input type="text" id="car_model_name" class="form-control" list="modelList" placeholder="เลือกยี่ห้อก่อน..." required autocomplete="off">
+<datalist id="modelList"></datalist>
+</div>
+</div>
+<div class="mb-2 mt-4 pt-2 border-top border-success border-opacity-25">
+<label class="form-label">4. เวลาเข้าบริการ & นัดส่งรถ</label>
+<div class="row g-2">
+<div class="col-6">
+<label class="form-label small text-muted">เวลารับรถเข้า</label>
+<input type="time" id="time_in" class="form-control fw-bold text-primary px-1" step="60" required>
+<div class="mt-2">
+<div class="form-check mb-1">
+<input class="form-check-input border-success" type="checkbox" id="toggle_other_date" onchange="toggleOtherDateBox(this)">
+<label class="form-check-label fw-bold text-success" for="toggle_other_date" style="font-size: 0.85rem;">
+นัดรับวันอื่น
+</label>
+</div>
+<div id="otherDateContainer" style="display: none;" class="mt-1">
+<label class="form-label small text-muted">เลือกวันที่นัดส่ง</label>
+<input type="date" id="promised_date" class="form-control fw-bold px-1">
+</div>
+</div>
+</div>
+<div class="col-6">
+<label class="form-label small text-muted">เวลานัดส่ง</label>
+<input type="time" id="promised_time" class="form-control fw-bold px-1" lang="en-GB" step="60" required>
+<div class="d-flex flex-wrap gap-1 mt-1 align-items-center">
+<button type="button" class="btn btn-outline-success btn-quick-time" onclick="addQuickTime(30)">+30นาที</button>
+<button type="button" class="btn btn-outline-success btn-quick-time" onclick="addQuickTime(60)">+1 ชม.</button>
+<button type="button" class="btn btn-outline-success btn-quick-time" onclick="addQuickTime(90)">+1.5 ชม.</button>
+<button type="button" class="btn btn-outline-success btn-quick-time" onclick="addQuickTime(120)">+2 ชม.</button>
+<button type="button" class="btn btn-outline-success btn-quick-time" onclick="addQuickTime(180)">+3 ชม.</button>
+<input type="checkbox" class="btn-check" id="set_time_later" value="1" autocomplete="off">
+<label class="btn btn-outline-warning btn-quick-time fw-bold text-dark" for="set_time_later" style="font-size: 0.72rem; padding: 2px 6px;">ระบุภายหลัง</label>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- ================= คอลัมน์ขวา ================= -->
+<div class="col-md-6 ps-md-4 mt-3 mt-md-0">
+<div class="mb-3">
+<label class="form-label small mb-1 text-muted">5. สถานะการรอ</label>
+<div class="btn-group w-100" role="group">
+<input type="radio" class="btn-check" name="waiting_status" id="wait1" value="รอรับ" checked>
+<label class="btn btn-outline-warning py-1 border-opacity-50 small fw-bold" for="wait1" style="font-size: 0.85rem;">รอรับรถ</label>
+<input type="radio" class="btn-check" name="waiting_status" id="wait2" value="ไม่รอรับ">
+<label class="btn btn-outline-danger py-1 border-opacity-50 small fw-bold" for="wait2" style="font-size: 0.85rem;">ทิ้งรถไว้ (ไม่รอ)</label>
+</div>
+</div>
+<div class="service-section mb-4">
+<div class="mb-2">
+<label class="form-label fs-5 text-success fw-bold mb-2">6. รายการที่ทำ</label>
+<div class="d-flex flex-wrap gap-2 mb-3">
+<button type="button" class="btn btn-outline-success btn-fast-service" onclick="appendService('เปลี่ยนยาง')">เปลี่ยนยาง</button>
+<button type="button" class="btn btn-outline-success btn-fast-service" onclick="appendService('สลับยาง')">สลับยาง</button>
+<button type="button" class="btn btn-outline-success btn-fast-service" onclick="appendService('ปะยาง')">ปะยาง</button>
+<button type="button" class="btn btn-outline-success btn-fast-service" onclick="appendService('ถ่วงล้อ/ตั้งศูนย์')">ถ่วงล้อ/ตั้งศูนย์</button>
+<button type="button" class="btn btn-outline-success btn-fast-service" onclick="appendService('เปลี่ยนน้ำมันเครื่อง')">เปลี่ยนน้ำมันเครื่อง</button>
+<button type="button" class="btn btn-outline-success btn-fast-service" onclick="appendService('เช็คช่วงล่าง')">เช็คช่วงล่าง</button>
+<button type="button" class="btn btn-outline-success btn-fast-service" onclick="appendService('ล้างแผงคอยล์ร้อน')">ล้างแผงคอยล์ร้อน</button>
+</div>
+</div>
+<div class="input-group mb-2 shadow-sm">
+<span class="input-group-text bg-success text-white border-success fw-bold px-3">🔍 ค้นหา</span>
+<input type="text" id="serviceSearchInput" class="form-control border-success text-dark fw-bold" list="allServicesList" placeholder="พิมพ์เพื่อค้นหา หรือเพิ่มรายการ..." onchange="handleServiceSearch(this)" autocomplete="off">
+</div>
+<datalist id="allServicesList"></datalist>
+<textarea id="service_details" class="form-control shadow-sm mb-2" rows="3" placeholder="ระบุรายละเอียดงานซ่อม หรือกดเลือกรายการด้านบน..." required style="transition: background-color 0.3s; font-size: 0.95rem; font-weight: 600; border-color: #198754;"></textarea>
+<div class="d-flex justify-content-between align-items-center mb-2">
+<button type="button" class="btn btn-outline-danger btn-sm fw-bold px-3 shadow-sm" onclick="appendService('[งานแก้]')">
+🛠️ งานแก้
+</button>
+<button type="button" class="btn btn-success btn-sm fw-bold px-3 shadow-sm" style="border-radius: 8px;" data-bs-toggle="modal" data-bs-target="#serviceCategoryModal">
+📋 เลือกจากหมวดหมู่
+</button>
+</div>
+</div>
+<div class="mb-3">
+<label class="form-label">7. หมายเหตุ</label>
+<input type="text" id="remarks" class="form-control" placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)">
+</div>
+<div class="mt-4 text-center">
+<div class="d-inline-flex align-items-center justify-content-center gap-2 flex-wrap">
+<button type="submit" class="btn btn-success fw-bold px-4 py-2 shadow-sm" style="border-radius: 8px; font-size: 0.9rem;">
+บันทึกข้อมูลเข้าระบบ
+</button>
+<button type="button" class="btn btn-outline-secondary fw-semibold px-3 py-2 shadow-sm" style="border-radius: 8px; font-size: 0.85rem;" onclick="resetWholeForm()">
+ล้างข้อมูล
+</button>
+</div>
+</div>
+</div>
+</div>
+<div class="row g-2 mt-3">
+<div class="col-4">
+<div class="py-1 px-2 bg-light border border-success border-opacity-50 rounded text-center shadow-sm">
+<span class="d-block text-muted" style="font-size: 0.7rem; font-weight: 500;">รถที่บันทึกเข้าระบบวันนี้</span>
+<span id="stat-total" class="fw-bold fs-6 text-success">0</span> <span class="small text-muted" style="font-size: 0.65rem;">คัน</span>
+</div>
+</div>
+<div class="col-4">
+<div class="py-1 px-2 bg-light border border-warning border-opacity-50 rounded text-center shadow-sm">
+<span class="d-block text-muted" style="font-size: 0.7rem; font-weight: 500;">รถที่กำลังซ่อมอยู่</span>
+<span id="stat-repairing" class="fw-bold fs-6 text-warning text-dark">0</span> <span class="small text-muted" style="font-size: 0.65rem;">คัน</span>
+<span id="stat-repairing-carry" class="d-block text-secondary" style="font-size: 0.6rem;">ค้างจากเมื่อวาน 0 คัน รวม 0 คัน</span>
+</div>
+</div>
+<div class="col-4">
+<div class="py-1 px-2 bg-light border border-primary border-opacity-50 rounded text-center shadow-sm">
+<span class="d-block text-muted" style="font-size: 0.7rem; font-weight: 700;">ส่งมอบแล้ววันนี้</span>
+<span id="stat-delivered" class="fw-bold fs-6 text-primary">0</span> <span class="small text-muted" style="font-size: 0.65rem;">คัน</span>
+</div>
+</div>
+</div>
+<div class="text-center mt-4">
+<span id="liveClock" class="badge clock-badge fs-6 px-4 py-2 shadow-sm rounded-pill">กำลังโหลดเวลา...</span>
+</div>
+</form>
+</div>
+</div>
+<!-- Modal รายงานข้อมูลลูกค้าใหม่ -->
+<div class="modal fade text-dark" id="newCustomerReportModal" tabindex="-1">
+<div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+<div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+<div class="modal-header bg-primary text-white py-2">
+<h5 class="modal-title fw-bold">📊 รายงานสรุปข้อมูลลูกค้าใหม่</h5>
+<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body p-3" id="newCusReportCaptureArea">
+<div class="d-flex justify-content-between align-items-center mb-2 bg-light p-2 rounded border flex-wrap gap-2">
+<div class="d-flex align-items-center gap-2">
+<label class="form-label mb-0 fw-bold text-primary">เลือกวันที่:</label>
+<input type="date" id="filterNewCusDate" class="form-control form-control-sm fw-bold px-2" style="width: 150px;" onchange="loadNewCustomerReport()">
+</div>
+<div>
+<span class="fw-bold text-primary fs-6 me-3" id="newCusTotalCount">ลูกค้าใหม่ทั้งหมด: 0 ราย</span>
+<span class="text-muted small" id="newCusChannelBreakdown">สรุปช่องทาง: -</span>
+</div>
+<div class="d-flex gap-2">
+<button type="button" class="btn btn-success btn-sm fw-bold shadow-sm" onclick="exportNewCustomerToExcel()">📊 ดาวน์โหลด Excel</button>
+<button type="button" class="btn btn-primary btn-sm fw-bold shadow-sm" onclick="exportNewCustomerToImage()">📷 ดาวน์โหลดรูปภาพ</button>
+</div>
+</div>
+<div class="table-responsive">
+<table class="table table-custom table-bordered table-compact align-middle text-center mb-0">
+<thead>
+<tr class="table-dark">
+<th style="width: 6%">ลำดับ</th>
+<th style="width: 12%">วันที่บันทึก</th>
+<th style="width: 12%">ผู้รับรถ (CS)</th>
+<th style="width: 20%">รุ่น / ทะเบียนรถ</th>
+<th style="width: 25%">รายการที่ทำ</th>
+<th style="width: 25%">ช่องทางที่รู้จักร้าน</th>
+</tr>
+</thead>
+<tbody id="tbody-new-customer-report"></tbody>
+</table>
+</div>
+</div>
+<div class="modal-footer py-1">
+<button type="button" class="btn btn-secondary btn-sm px-4 fw-bold" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Modal รายงานงานแก้ -->
+<div class="modal fade text-dark" id="reworkReportModal" tabindex="-1">
+<div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+<div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+<div class="modal-header bg-danger text-white py-2">
+<h5 class="modal-title fw-bold">🛠️ รายงานสรุปรายการงานแก้</h5>
+<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body p-3" id="reworkReportCaptureArea">
+<div class="d-flex justify-content-between align-items-center mb-2 bg-light p-2 rounded border flex-wrap gap-2">
+<div class="d-flex align-items-center gap-2">
+<label class="form-label mb-0 fw-bold text-danger">เลือกวันที่:</label>
+<input type="date" id="filterReworkDate" class="form-control form-control-sm fw-bold px-2" style="width: 150px;" onchange="loadReworkReport()">
+</div>
+<div>
+<span class="fw-bold text-danger fs-6 me-3" id="reworkTotalCount">งานแก้ทั้งหมด: 0 รายการ</span>
+</div>
+<div class="d-flex gap-2">
+<button type="button" class="btn btn-success btn-sm fw-bold shadow-sm" onclick="exportReworkToExcel()">📊 ดาวน์โหลด Excel</button>
+<button type="button" class="btn btn-primary btn-sm fw-bold shadow-sm" onclick="exportReworkToImage()">📷 ดาวน์โหลดรูปภาพ</button>
+</div>
+</div>
+<div class="table-responsive">
+<table class="table table-custom table-bordered table-compact align-middle text-center mb-0">
+<thead>
+<tr class="table-dark">
+<th style="width: 6%">ลำดับ</th>
+<th style="width: 13%">วันที่บันทึก</th>
+<th style="width: 12%">ผู้รับรถ (CS)</th>
+<th style="width: 12%">ทีมช่าง</th>
+<th style="width: 22%">รุ่น / ทะเบียนรถ</th>
+<th style="width: 35%">รายละเอียดงานแก้</th>
+</tr>
+</thead>
+<tbody id="tbody-rework-report"></tbody>
+</table>
+</div>
+</div>
+<div class="modal-footer py-1">
+<button type="button" class="btn btn-secondary btn-sm px-4 fw-bold" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Modal หมวดหมู่งานซ่อม -->
+<div class="modal fade" id="serviceCategoryModal" tabindex="-1">
+<div class="modal-dialog modal-lg modal-dialog-scrollable">
+<div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+<div class="modal-header bg-success text-white py-2" style="border-radius: 12px 12px 0 0;">
+<h5 class="modal-title fs-6 fw-bold">เลือกรายการงานซ่อม</h5>
+<button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body p-0">
+<div class="accordion accordion-flush" id="accordionServices"></div>
+</div>
+<div class="modal-footer py-1 bg-light">
+<button type="button" class="btn btn-secondary btn-sm fw-bold px-4" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Modal ค้าส่ง -->
+<div class="modal fade" id="wholesaleModal" tabindex="-1">
+<div class="modal-dialog modal-lg modal-dialog-centered">
+<div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+<div class="modal-header bg-info text-dark py-2">
+<h5 class="modal-title fw-bold">📦 บันทึกรายการลูกค้าค้าส่ง</h5>
+<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body p-4">
+<form id="wholesaleForm">
+<div class="mb-3">
+<label class="form-label text-dark fw-bold">1. ผู้รับเรื่อง (CS)</label>
+<select id="ws_receiver" class="d-none" required>
+    <option value="">เลือก CS...</option>
+    <option value="CS แอน">CS แอน</option>
+    <option value="CS จ๋อม">CS จ๋อม</option>
+    <option value="CS แตง">CS แตง</option>
+    <option value="CS ตั๊ก">CS ตั๊ก</option>
+    <option value="CS สา">CS สา</option>
+    <option value="CS พีม">CS พีม</option>
+    <option value="CS พีม">ค้าส่ง ทิวไผ่</option>
+</select>
+<div class="d-flex gap-1 flex-wrap">
+    <input type="radio" class="btn-check" name="ws_receiver_btn" id="ws_cs1" value="CS แอน" onchange="document.getElementById('ws_receiver').value=this.value">
+    <label class="btn btn-outline-success btn-sm fw-bold px-2 py-1" for="ws_cs1" style="font-size:1.1rem;">แอน</label>
+    <input type="radio" class="btn-check" name="ws_receiver_btn" id="ws_cs2" value="CS จ๋อม" onchange="document.getElementById('ws_receiver').value=this.value">
+    <label class="btn btn-outline-success btn-sm fw-bold px-2 py-1" for="ws_cs2" style="font-size:1.1rem;">จ๋อม</label>
+    <input type="radio" class="btn-check" name="ws_receiver_btn" id="ws_cs3" value="CS แตง" onchange="document.getElementById('ws_receiver').value=this.value">
+    <label class="btn btn-outline-success btn-sm fw-bold px-2 py-1" for="ws_cs3" style="font-size:1.1rem;">แตง</label>
+    <input type="radio" class="btn-check" name="ws_receiver_btn" id="ws_cs4" value="CS ตั๊ก" onchange="document.getElementById('ws_receiver').value=this.value">
+    <label class="btn btn-outline-success btn-sm fw-bold px-2 py-1" for="ws_cs4" style="font-size:1.1rem;">ตั๊ก</label>
+    <input type="radio" class="btn-check" name="ws_receiver_btn" id="ws_cs5" value="CS สา" onchange="document.getElementById('ws_receiver').value=this.value">
+    <label class="btn btn-outline-success btn-sm fw-bold px-2 py-1" for="ws_cs5" style="font-size:1.1rem;">สา</label>
+    <input type="radio" class="btn-check" name="ws_receiver_btn" id="ws_cs6" value="CS พีม" onchange="document.getElementById('ws_receiver').value=this.value">
+    <label class="btn btn-outline-success btn-sm fw-bold px-2 py-1" for="ws_cs6" style="font-size:1.1rem;">พีม</label>
+</div>
+</div>
+<div class="mb-3">
+<label class="form-label text-dark fw-bold">2. ชื่อลูกค้า</label>
+<div class="input-group">
+<input type="text" id="ws_customer_name" class="form-control border-info" list="wsCustomerList" placeholder="พิมพ์ชื่อลูกค้า..." required autocomplete="off">
+<button type="button" class="btn btn-success fw-bold" onclick="saveWholesaleCustomer()">💾 บันทึกชื่อลูกค้า</button>
+</div>
+<datalist id="wsCustomerList"></datalist>
+</div>
+<div class="mb-3">
+<label class="form-label text-dark fw-bold">3. รายการที่สั่ง</label>
+<div class="input-group mb-2 shadow-sm">
+<span class="input-group-text bg-info text-dark border-info fw-bold px-3">🔍 ค้นหา</span>
+<input type="text" id="wsServiceSearchInput" class="form-control border-info text-dark fw-bold" list="allServicesList" placeholder="พิมพ์เพื่อค้นหา หรือเพิ่มรายการ..." onchange="handleWsServiceSearch(this)" autocomplete="off">
+</div>
+<textarea id="ws_order_details" class="form-control shadow-sm" rows="3" placeholder="ระบุรายการที่สั่ง..." required style="border-color: #0dcaf0;"></textarea>
+</div>
+<div class="mb-3">
+<label class="form-label text-dark fw-bold">4. เวลาบันทึกข้อมูล: <span id="ws_timestamp_text" class="fw-normal text-muted">กำลังโหลด...</span></label>
+<input type="hidden" id="ws_pickup_date">
+<input type="hidden" id="ws_pickup_time">
+</div>
+<div class="text-end mt-4">
+<button type="button" class="btn btn-secondary fw-bold px-4 py-2 me-2" data-bs-dismiss="modal">ยกเลิก</button>
+<button type="button" class="btn btn-info fw-bold px-4 py-2 shadow-sm text-dark" onclick="submitWholesaleForm()">บันทึกรายการค้าส่ง</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+</div>
+<!-- ⚠️ กล่องเตือนลอยตามเมาส์ -->
+<div id="thaiWarningTooltip" style="position: fixed; display: none; background: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; z-index: 9999; pointer-events: none; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+    ⚠️ กรุณากรอกเป็นภาษาอังกฤษเท่านั้น
+</div>
+<script>
+function toggleNewCustomerOptions(isNew) {
+    const box = document.getElementById('newCustomerDetailsBox');
+    box.style.display = isNew ? 'block' : 'none';
+    if (!isNew) {
+        document.querySelectorAll('input[name="new_cus_channel"]').forEach(r => r.checked = false);
+        document.getElementById('new_cus_other_text').value = '';
+        document.getElementById('new_cus_other_text').style.display = 'none';
+    }
+}
+function toggleOtherChannelInput(isOther) {
+    const input = document.getElementById('new_cus_other_text');
+    input.style.display = isOther ? 'block' : 'none';
+    if (isOther) input.focus();
+}
+const servicesDB = {
+    "1. ช่วงล่าง": ["เช็กช่วงล่าง", "เปลี่ยนโช้คอัพ", "เปลี่ยนสปริง", "เปลี่ยนลูกหมาก", "เปลี่ยนบูชปีกนก", "เปลี่ยนปีกนก", "เปลี่ยนลูกปืนล้อ", "เปลี่ยนยางแท่นเครื่อง / แท่นเกียร์", "ตั้งศูนย์ล้อ", "เช็กอาการสั่น", "เช็กรถกินซ้าย-ขวา", "Balance Arm", "Stabilizer Arm", "JS1โตงเตง"],
+    "2. ยาง & ล้อ": ["เปลี่ยนยาง", "สลับยาง", "ปะยาง", "ถ่ายลมไนโตรเจน", "ถ่วงล้อ", "ตั้งศูนย์", "เปลี่ยนแม็ก", "ตรวจเช็กอาการพวงมาลัยสั่น"],
+    "3. ของเหลว": ["เปลี่ยนน้ำมันเครื่อง", "เปลี่ยนไส้กรองน้ำมันเครื่อง", "เปลี่ยนน้ำมันเกียร์", "เปลี่ยนน้ำมันเฟืองท้าย", "เปลี่ยนน้ำมันเบรก", "เปลี่ยนน้ำยาหม้อน้ำ", "เปลี่ยนน้ำมันพวงมาลัยเพาเวอร์", "เปลี่ยนน้ำมันคลัตช์", "ตรวจเช็กระดับของเหลวต่าง ๆ", "ฟลัชชิ่งน้ำมันเครื่อง", "ฟลัชชิ่งระบบเกียร์", "ฟลัชชิ่งระบบหล่อเย็น"],
+    "4. เครื่องยนต์": ["ตรวจเช็กเครื่องยนต์", "ตรวจเช็กไฟโชว์", "ล้างหัวฉีด", "ล้างปีกผีเสื้อ", "ล้างระบบไอดี", "เปลี่ยนหัวเทียน", "เปลี่ยนคอยล์จุดระเบิด", "เปลี่ยนสายพาน", "เปลี่ยนสายพานไทม์มิ่ง", "เปลี่ยนโซ่ราวลิ้น", "เปลี่ยนแท่นเครื่อง", "ตรวจเช็กระบบเกียร์", "ตรวจเช็กอาการเกียร์กระตุก"],
+    "5. ระบบเบรก": ["เปลี่ยนผ้าเบรก", "เปลี่ยนจานเบรก", "เจียรจานเบรก", "เปลี่ยนคาลิปเปอร์", "ไล่น้ำมันเบรก", "เช็กระบบเบรก", "เช็กอาการเบรกสั่น", "เช็กเสียงเบรก", "เช็กระบบเบรก ABS"],
+    "6. แอร์รถยนต์": ["ตรวจเช็กระบบแอร์", "เติมน้ำยาแอร์", "ล้างแอร์", "ล้างคอยล์เย็น", "เปลี่ยนกรองแอร์", "เปลี่ยนคอมเพรสเซอร์แอร์", "เปลี่ยนคอยล์เย็น", "เปลี่ยนคอยล์ร้อน", "ซ่อมแอร์รั่ว", "ตรวจหารอยรั่ว", "เช็กอุณหภูมิ / แรงดันระบบแอร์", "แอร์ไม่เย็น / เย็นช้า / มีกลิ่น", "ล้างแผงคอยล์ร้อน", "เปลี่ยนตู้แอร์", "ฟลัชชิ่้งแอร์"],
+    "7. ระบบไฟฟ้า & แบตเตอรี่": ["เปลี่ยนแบตเตอรี่", "เช็กแบตเตอรี่", "เช็กระบบชาร์จ", "เช็กไดชาร์จ", "เช็กไดสตาร์ท", "เช็กระบบไฟฟ้ารถยนต์", "เช็กระบบไฟส่องสว่าง", "เปลี่ยนแบตไฮบริด", "maintenance แบตไฮบริด"],
+    "8. ชุดแต่ง & อุปกรณ์เสริม": ["ชุดแต่งรอบคัน", "กันชน", "สเกิร์ต", "สปอยเลอร์", "บันไดข้าง", "โรลบาร์", "แร็คหลังคา", "อัพเกรดไฟหน้า", "ติดกล้องรถยนต์" , "คันเร่งไฟฟ้า"],
+    "9. ตรวจเช็ก": ["เช็กสภาพรถ", "เช็กระยะ", "เช็กเดินทางไกล", "เช็กช่วงล่าง", "เช็กเบรก", "เช็กเครื่องยนต์", "เช็กเสียงดัง", "เช็กอาการรถสั่น"],
+    "10. บริการอื่น ๆ": ["เปลี่ยนใบปัดน้ำฝน", "เปลี่ยนหลอดไฟ", "เปลี่ยนกรองอากาศ", "เปลี่ยนกรองแอร์", "เปลี่ยนกรองน้ำมันเชื้อเพลิง", "ทำความสะอาดห้องเครื่อง", "อุปกรณ์และอะไหล่รถยนต์", "ติดฟิล์ม"]
+};
+function initServices() {
+    const datalist = document.getElementById('allServicesList');
+    const accordion = document.getElementById('accordionServices');
+    if(!datalist || !accordion) return;
+    let accHtml = '';
+    let index = 0;
+    for (const [category, items] of Object.entries(servicesDB)) {
+        items.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item;
+            datalist.appendChild(option);
+        });
+        accHtml += `
+        <div class="accordion-item border-0 border-bottom">
+            <h2 class="accordion-header" id="heading${index}">
+                <button class="accordion-button collapsed fw-bold text-success py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${index}" style="font-size: 0.9rem; background-color: #f8fafc;">
+                    ${category}
+                </button>
+            </h2>
+            <div id="collapse${index}" class="accordion-collapse collapse" data-bs-parent="#accordionServices">
+                <div class="accordion-body p-2 d-flex flex-wrap gap-2 bg-white">
+                    ${items.map(item => `<button type="button" class="btn btn-sm btn-outline-secondary bg-light text-dark border-secondary-subtle py-1 px-3 fw-semibold" style="font-size:0.8rem;" onclick="appendService('${item}')">+ ${item}</button>`).join('')}
+                </div>
+            </div>
+        </div>
+        `;
+        index++;
+    }
+    accordion.innerHTML = accHtml;
+}
+function appendService(serviceName) {
+    const textarea = document.getElementById('service_details');
+    let currentVal = textarea.value.trim();
+    if(currentVal === '') {
+        textarea.value = serviceName;
+    } else {
+        if(!currentVal.includes(serviceName)) {
+            textarea.value = currentVal + ', ' + serviceName;
+        }
+    }
+    document.getElementById('serviceSearchInput').value = '';
+    textarea.style.backgroundColor = '#d1e7dd';
+    setTimeout(() => { textarea.style.backgroundColor = '#fff'; }, 300);
+}
+function handleServiceSearch(inputElement) {
+    const val = inputElement.value.trim();
+    if (val) { appendService(val); }
+}
+initServices();
+function loadWholesaleCustomers() {
+    fetch('/api/wholesale/customers')
+    .then(res => res.json())
+    .then(data => {
+        const datalist = document.getElementById('wsCustomerList');
+        if(datalist) {
+            datalist.innerHTML = '';
+            (data.customers || []).forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                datalist.appendChild(opt);
+            });
+        }
+    });
+}
+loadWholesaleCustomers();
+function saveWholesaleCustomer() {
+    const name = document.getElementById('ws_customer_name').value.trim();
+    if(!name) { alert('กรุณาพิมพ์ชื่อลูกค้าก่อนกดบันทึก'); return; }
+    fetch('/api/wholesale/customers', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ name: name })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) {
+            alert('บันทึกชื่อลูกค้าเรียบร้อยแล้ว');
+            loadWholesaleCustomers();
+        }
+    });
+}
+function handleWsServiceSearch(inputElement) {
+    const val = inputElement.value.trim();
+    if (val) { 
+        const textarea = document.getElementById('ws_order_details');
+        let currentVal = textarea.value.trim();
+        if(currentVal === '') { textarea.value = val; } 
+        else if(!currentVal.includes(val)) { textarea.value = currentVal + ', ' + val; }
+        inputElement.value = '';
+    }
+}
+function setWholesaleCurrentTime() {
+    const now = new Date();
+    const todayStr = getTodayBKK();
+    const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    
+    const dateInput = document.getElementById('ws_pickup_date');
+    const timeInput = document.getElementById('ws_pickup_time');
+    if (dateInput) dateInput.value = todayStr;
+    if (timeInput) timeInput.value = currentTimeStr;
+    const timestampText = document.getElementById('ws_timestamp_text');
+    if (timestampText) {
+        timestampText.innerText = `${todayStr} ${currentTimeStr} น.`;
+    }
+}
+document.getElementById('wholesaleModal').addEventListener('show.bs.modal', function () {
+    setWholesaleCurrentTime();
+});
+function submitWholesaleForm() {
+    const receiver = document.getElementById('ws_receiver').value.trim();
+    const customer_name = document.getElementById('ws_customer_name').value.trim();
+    const order_details = document.getElementById('ws_order_details').value.trim();
+    
+    setWholesaleCurrentTime();
+    
+    const pDate = document.getElementById('ws_pickup_date').value;
+    const pTime = document.getElementById('ws_pickup_time').value;
+    
+    if(!receiver || !customer_name || !order_details || !pDate || !pTime) {
+        alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+        return;
+    }
+    
+    const pickup_time = `${pDate} ${pTime}`;
+    const now = new Date();
+    const created_date = getTodayBKK();
+    const created_time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    
+    fetch('/api/wholesale/jobs', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            receiver, customer_name, order_details, pickup_time, created_date, created_time
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) {
+            alert('บันทึกรายการค้าส่งเรียบร้อยแล้ว!');
+            document.getElementById('wholesaleForm').reset();
+            bootstrap.Modal.getInstance(document.getElementById('wholesaleModal')).hide();
+        } else {
+            alert('เกิดข้อผิดพลาด: ' + data.error);
+        }
+    });
+}
+let isTimeEdited = false;
+const timeInInput = document.getElementById('time_in');
+timeInInput.addEventListener('input', function() { isTimeEdited = true; });
+const timeLaterCheckbox = document.getElementById('set_time_later');
+const promisedTimeInput = document.getElementById('promised_time');
+timeLaterCheckbox.addEventListener('change', function() {
+    if (this.checked) {
+        promisedTimeInput.value = "";
+        promisedTimeInput.removeAttribute('required');
+        promisedTimeInput.setAttribute('disabled', 'true');
+        promisedTimeInput.classList.add('bg-light', 'text-muted');
+    } else {
+        promisedTimeInput.setAttribute('required', 'required');
+        promisedTimeInput.removeAttribute('disabled');
+        promisedTimeInput.classList.remove('bg-light', 'text-muted');
+    }
+});
+function toggleOtherDateBox(checkbox) {
+    const container = document.getElementById('otherDateContainer');
+    const promisedDateInput = document.getElementById('promised_date');
+    if (checkbox.checked) {
+        container.style.display = 'block';
+        promisedDateInput.setAttribute('required', 'required');
+    } else {
+        container.style.display = 'none';
+        promisedDateInput.removeAttribute('required');
+        promisedDateInput.value = getTodayBKK();
+    }
+}
+function addQuickTime(minutesToAdd) {
+    const timeInVal = timeInInput.value;
+    if (!timeInVal) {
+        alert('กรุณากำหนดเวลารับรถเข้าก่อนกดปุ่มลัดเวลา');
+        timeInInput.focus();
+        return;
+    }
+    const [hours, minutes] = timeInVal.split(':').map(Number);
+    const dateObj = new Date();
+    dateObj.setHours(hours, minutes + minutesToAdd, 0, 0);
+    
+    const newHours = String(dateObj.getHours()).padStart(2, '0');
+    const newMinutes = String(dateObj.getMinutes()).padStart(2, '0');
+    promisedTimeInput.value = `${newHours}:${newMinutes}`;
+}
+const plateInput = document.getElementById('license_plate');
+const plateRadios = document.querySelectorAll('input[name="plate_type"]');
+plateRadios.forEach(radio => {
+    radio.addEventListener('change', function() {
+        if (this.value === "ไม่มีทะเบียน") {
+            plateInput.value = "ไม่มีทะเบียน";
+            plateInput.setAttribute('readonly', 'readonly');
+            plateInput.removeAttribute('required');
+        } else {
+            if (plateInput.value === "ไม่มีทะเบียน") plateInput.value = "";
+            plateInput.removeAttribute('readonly');
+            plateInput.setAttribute('required', 'required');
+        }
+    });
+});
+function updateClock() {
+    const now = new Date();
+    document.getElementById('liveClock').innerHTML = `${now.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}`;
+    if (!isTimeEdited) {
+        timeInInput.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    }
+}
+setInterval(updateClock, 1000);
+updateClock();
+const getTodayBKK = () => {
+    const d = new Date();
+    return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+};
+document.getElementById('promised_date').value = getTodayBKK();
+function submitJobData(payload) {
+    fetch('/api/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) {
+            alert('บันทึกข้อมูลเรียบร้อยแล้ว!');
+            window.location.reload();
+        } else {
+            alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + (data.error || ''));
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+    });
+}
+document.getElementById('jobForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const receiverElement = document.querySelector('input[name="receiver_cs"]:checked');
+    if (!receiverElement) { alert('กรุณาเลือกผู้รับรถ (CS)'); return; }
+    const teamElement = document.querySelector('input[name="team_select"]:checked');
+    if (!teamElement) { alert('กรุณาเลือกทีมช่างผู้ดูแล'); return; }
+    
+    const receiver = receiverElement.value;
+    const team = teamElement.value;
+    const waiting_status = document.querySelector('input[name="waiting_status"]:checked').value;
+    const carBrand = document.getElementById('car_brand').value;
+    const carModelName = document.getElementById('car_model_name').value;
+    const fullCarModel = `${carBrand} ${carModelName}`;
+    let finalLicensePlate = document.getElementById('license_plate').value.trim();
+    const plateType = document.querySelector('input[name="plate_type"]:checked').value;
+    const vipStatus = document.querySelector('input[name="vip_status"]:checked').value;
+    
+    if (plateType === 'ป้ายแดง' && !finalLicensePlate.includes('(ป้ายแดง)')) {
+        finalLicensePlate += ' (ป้ายแดง)';
+    }
+    
+    let newCustomerChannelVal = "";
+    if (vipStatus === 'ลูกค้าใหม่') {
+        const selectedChannel = document.querySelector('input[name="new_cus_channel"]:checked');
+        if (!selectedChannel) {
+            alert('กรุณาเลือกช่องทางที่ลูกเจ้ารู้จัก JS1 Autowork (สำหรับลูกค้าใหม่)');
+            return;
+        }
+        if (selectedChannel.value === 'อื่น ๆ') {
+            const otherText = document.getElementById('new_cus_other_text').value.trim();
+            if (!otherText) {
+                alert('กรุณาระบุข้อมูลในช่อง "อื่น ๆ" ให้ครบถ้วน');
+                document.getElementById('new_cus_other_text').focus();
+                return;
+            }
+            newCustomerChannelVal = `อื่น ๆ: ${otherText}`;
+        } else {
+            newCustomerChannelVal = selectedChannel.value;
+        }
+    }
+    
+    let finalRemarks = document.getElementById('remarks').value || "";
+    if (vipStatus === 'ลูกค้าใหม่') {
+        finalRemarks = finalRemarks ? `[ลูกค้าใหม่: ${newCustomerChannelVal}] ${finalRemarks}` : `[ลูกค้าใหม่: ${newCustomerChannelVal}]`;
+    }
+    
+    const serviceDetailsVal = document.getElementById('service_details').value;
+    
+    const isOtherDateTicked = document.getElementById('toggle_other_date').checked;
+    const finalPromisedDate = isOtherDateTicked ? document.getElementById('promised_date').value : getTodayBKK();
+    
+    const payload = {
+        receiver: receiver,
+        team: team,
+        license_plate: finalLicensePlate,
+        car_model: fullCarModel,
+        time_in: timeInInput.value,
+        created_date: getTodayBKK(),
+        service_details: serviceDetailsVal,
+        promised_date: finalPromisedDate,
+        promised_time: timeLaterCheckbox.checked ? "" : promisedTimeInput.value,
+        waiting_status: waiting_status,
+        remarks: finalRemarks,
+        vip_status: vipStatus,
+        new_customer_channel: newCustomerChannelVal
+    };
+    
+    // 📌 ดึงเฉพาะตัวเลขจากเลขทะเบียนใหม่ที่กรอกเข้ามา เพื่อใช้เทียบเคียง
+    const cleanNewPlateNum = finalLicensePlate.replace(/\D/g, '');
+
+    // ดึงข้อมูลงานในระบบของวันนี้มาตรวจสอบเงื่อนไขซ้ำ
+    fetch(`/api/jobs?date=${getTodayBKK()}`)
+    .then(res => res.json())
+    .then(data => {
+        const jobs = data.jobs || [];
+        let isDuplicateFound = false;
+
+        for (let job of jobs) {
+            if (job.is_cancelled === 1) continue;
+            
+            // กรองเอาเฉพาะตัวเลขจากทะเบียนเดิมในระบบ
+            const existingPlate = job.license_plate || '';
+            const cleanExistingPlateNum = existingPlate.replace(/\D/g, '');
+            
+            // ดึงชื่อ CS เดิม
+            const existingReceiver = job.receiver ? job.receiver.trim() : '';
+
+            // เช็กเงื่อนไข: ตัวเลขทะเบียนตรงกัน และ ชื่อ CS ผู้รับรถตรงกัน
+            if (cleanNewPlateNum !== "" && cleanExistingPlateNum === cleanNewPlateNum && existingReceiver === receiver) {
+                isDuplicateFound = true;
+                break;
+            }
+        }
+
+        if (isDuplicateFound) {
+            alert(`⚠️ แจ้งเตือน: พบรายการรถหมายเลขทะเบียนที่มีตัวเลข "${cleanNewPlateNum}" และรับเรื่องโดย "${receiver}" ถูกบันทึกไว้แล้วในระบบวันนี้! ไม่สามารถบันทึกซ้ำได้`);
+        } else {
+            submitJobData(payload);
+        }
+    })
+    .catch(err => {
+        console.error("Error checking duplicate by number and CS:", err);
+        submitJobData(payload); // หากระบบขัดข้อง ให้ปล่อยผ่านไปบันทึกตามปกติ
+    });
+});
+function openNewCustomerReportModal() {
+    document.getElementById('filterNewCusDate').value = getTodayBKK();
+    loadNewCustomerReport();
+    new bootstrap.Modal(document.getElementById('newCustomerReportModal')).show();
+}
+function loadNewCustomerReport() {
+    const selectedDate = document.getElementById('filterNewCusDate').value || getTodayBKK();
+    fetch(`/api/reports/new-customers?date=${selectedDate}`)
+    .then(res => res.json())
+    .then(data => {
+        const tbody = document.getElementById('tbody-new-customer-report');
+        tbody.innerHTML = '';
+        let records = data.records || [];
+        document.getElementById('newCusTotalCount').innerText = `ลูกค้าใหม่ทั้งหมด: ${records.length} ราย`;
+        
+        let channelCounts = {};
+        records.forEach(r => {
+            let mainChan = r.channel && r.channel.startsWith('อื่น ๆ') ? 'อื่น ๆ' : (r.channel || 'ไม่ระบุ');
+            channelCounts[mainChan] = (channelCounts[mainChan] || 0) + 1;
+        });
+        let breakdownStr = Object.entries(channelCounts).map(([k, v]) => `${k}: ${v}`).join(' | ');
+        document.getElementById('newCusChannelBreakdown').innerText = breakdownStr ? `สรุปช่องทาง: ${breakdownStr}` : 'สรุปช่องทาง: -';
+        
+        if (records.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-muted py-4 fw-bold">ไม่มีข้อมูลบันทึกในวันที่เลือก</td></tr>`;
+        } else {
+            records.forEach((item, idx) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="fw-bold">${idx + 1}</td>
+                        <td>${item.date}</td>
+                        <td>${item.receiver}</td>
+                        <td><span class="fw-bold text-dark">${item.car_model}</span><br><span class="text-primary fw-bold" style="font-size:0.75rem;">${item.license_plate}</span></td>
+                        <td class="text-start fw-bold text-success" style="font-size: 0.85rem;">${item.service_details || '-'}</td>
+                        <td class="text-start fw-bold text-dark">${item.channel}</td>
+                    </tr>
+                `;
+            });
+        }
+    })
+    .catch(err => console.error("Error loading new customer report:", err));
+}
+function openReworkReportModal() {
+    document.getElementById('filterReworkDate').value = getTodayBKK();
+    loadReworkReport();
+    new bootstrap.Modal(document.getElementById('reworkReportModal')).show();
+}
+function loadReworkReport() {
+    const selectedDate = document.getElementById('filterReworkDate').value || getTodayBKK();
+    fetch(`/api/reports/rework?date=${selectedDate}`)
+    .then(res => res.json())
+    .then(data => {
+        const tbody = document.getElementById('tbody-rework-report');
+        tbody.innerHTML = '';
+        let records = data.records || [];
+        document.getElementById('reworkTotalCount').innerText = `งานแก้ทั้งหมด: ${records.length} รายการ`;
+        
+        if (records.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-muted py-4 fw-bold">ไม่มีข้อมูลบันทึกในวันที่เลือก</td></tr>`;
+        } else {
+            records.forEach((item, idx) => {
+                let teamStr = '-';
+                if (item.team) {
+                    teamStr = (item.team === 'Subaru' || item.team.includes('Subaru')) ? 'Subaru' : `ทีม ${item.team}`;
+                }
+                
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="fw-bold">${idx + 1}</td>
+                        <td>${item.date}</td>
+                        <td>${item.receiver}</td>
+                        <td><span class="badge bg-secondary fw-bold">${teamStr}</span></td>
+                        <td><span class="fw-bold text-dark">${item.car_model}</span><br><span class="text-primary fw-bold" style="font-size:0.75rem;">${item.license_plate}</span></td>
+                        <td class="text-start fw-bold text-danger">${item.details}</td>
+                    </tr>
+                `;
+            });
+        }
+    })
+    .catch(err => console.error("Error loading rework report:", err));
+}
+function exportNewCustomerToExcel() {
+    const selectedDate = document.getElementById('filterNewCusDate').value || getTodayBKK();
+    fetch(`/api/reports/new-customers?date=${selectedDate}`)
+    .then(res => res.json())
+    .then(data => {
+        let records = data.records || [];
+        if (records.length === 0) { alert("ไม่มีข้อมูลสำหรับส่งออกในวันที่เลือก"); return; }
+        let excelData = records.map((item, idx) => ({
+            "ลำดับ": idx + 1,
+            "วันที่บันทึก": item.date,
+            "ผู้รับรถ (CS)": item.receiver,
+            "รุ่นรถ": item.car_model,
+            "เลขทะเบียน": item.license_plate,
+            "รายการที่ทำ": item.service_details || '-',
+            "ช่องทางที่รู้จักร้าน": item.channel
+        }));
+        let ws = XLSX.utils.json_to_sheet(excelData);
+        let wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "ลูกค้าใหม่");
+        XLSX.writeFile(wb, `New_Customers_Report_${selectedDate}.xlsx`);
+    });
+}
+function exportNewCustomerToImage() {
+    html2canvas(document.getElementById('newCusReportCaptureArea'), { scale: 2 }).then(canvas => {
+        let link = document.createElement('a');
+        link.download = `New_Customers_Report_${document.getElementById('filterNewCusDate').value || getTodayBKK()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    });
+}
+function exportReworkToExcel() {
+    const selectedDate = document.getElementById('filterReworkDate').value || getTodayBKK();
+    fetch(`/api/reports/rework?date=${selectedDate}`)
+    .then(res => res.json())
+    .then(data => {
+        let records = data.records || [];
+        if (records.length === 0) { alert("ไม่มีข้อมูลสำหรับส่งออกในวันที่เลือก"); return; }
+        let excelData = records.map((item, idx) => ({
+            "ลำดับ": idx + 1,
+            "วันที่บันทึก": item.date,
+            "ผู้รับรถ (CS)": item.receiver,
+            "ทีมช่าง": item.team ? ((item.team === 'Subaru' || item.team.includes('Subaru')) ? 'Subaru' : `ทีม ${item.team}`) : '-',
+            "รุ่นรถ": item.car_model,
+            "เลขทะเบียน": item.license_plate,
+            "รายละเอียดงานแก้": item.details
+        }));
+        let ws = XLSX.utils.json_to_sheet(excelData);
+        let wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "งานแก้");
+        XLSX.writeFile(wb, `Rework_Report_${selectedDate}.xlsx`);
+    });
+}
+function exportReworkToImage() {
+    html2canvas(document.getElementById('reworkReportCaptureArea'), { scale: 2 }).then(canvas => {
+        let link = document.createElement('a');
+        link.download = `Rework_Report_${document.getElementById('filterReworkDate').value || getTodayBKK()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    });
+}
+function updateFormSummaryStats() {
+    const todayStr = getTodayBKK();
+    fetch(`/api/jobs?date=${todayStr}`)
+    .then(res => res.json())
+    .then(data => {
+        const jobs = data.jobs || [];
+        const todayCreatedJobs = jobs.filter(j => j.created_date === todayStr && j.is_cancelled !== 1);
+        document.getElementById('stat-total').innerText = todayCreatedJobs.length;
+        
+        const activeRepairingJobs = jobs.filter(j => j.is_cancelled !== 1 && j.is_delivered !== 1 && j.payment_status !== 'ชำระเงินแล้ว');
+        const repairingCarry = activeRepairingJobs.filter(j => j.created_date && j.created_date < todayStr).length;
+        const totalRepairingCount = activeRepairingJobs.length;
+        
+        document.getElementById('stat-repairing').innerText = totalRepairingCount;
+        document.getElementById('stat-repairing-carry').innerText = `ค้างจากเมื่อวาน ${repairingCarry} คัน รวม ${totalRepairingCount} คัน`;
+        
+        const deliveredToday = jobs.filter(j => {
+            if (j.is_cancelled === 1) return false;
+            let closedDateStr = "";
+            if (j.delivered_at && j.delivered_at !== 'null') {
+                const offset = 7 * 60 * 60 * 1000;
+                closedDateStr = new Date(new Date(j.delivered_at).getTime() + offset).toISOString().split('T')[0];
+            } else {
+                closedDateStr = j.promised_date || j.created_date;
+            }
+            return closedDateStr === todayStr && (j.is_delivered === 1 || j.payment_status === 'ชำระเงินแล้ว');
+        });
+        document.getElementById('stat-delivered').innerText = deliveredToday.length;
+    })
+    .catch(err => console.error("Error loading summary stats:", err));
+}
+updateFormSummaryStats();
+setInterval(updateFormSummaryStats, 10000);
+function resetWholeForm() {
+    if (confirm("คุณต้องการล้างข้อมูลทั้งหมดในฟอร์มนี้ใช่หรือไม่?")) {
+        document.getElementById('jobForm').reset();
+        document.getElementById('license_plate').value = "";
+        document.getElementById('license_plate').removeAttribute('readonly');
+        document.getElementById('license_plate').setAttribute('required', 'required');
+        document.getElementById('license_plate').className = "form-control form-control-sm fw-bold text-success mb-2";
+        document.getElementById('toggle_other_date').checked = false;
+        document.getElementById('otherDateContainer').style.display = 'none';
+        document.getElementById('promised_date').value = getTodayBKK();
+        document.getElementById('promised_time').value = "";
+        toggleNewCustomerOptions(false);
+        isTimeEdited = false;
+        updateClock();
+    }
+}
+const carModelsDatabase = {
+    "Aion": ["AION UT", "AION Y Plus", "AION V", "AION ES"],
+    "Alfa Romeo": ["Giulia", "Giulia Quadrifoglio", "Stelvio", "Stelvio Quadrifoglio", "Tonale", "4C", "Giulietta", "156", "Spider"],
+    "Aston Martin": ["Vantage", "DB12", "DBX", "Vanquish", "DB11", "DBS", "Rapide S", "Valhalla", "Valkyrie"],
+    "Audi": ["A1", "A3", "A4", "A5", "A6", "A7", "A8", "Q2", "Q3", "Q5", "Q7", "Q8", "A6 e-tron", "Q8 e-tron", "e-tron GT", "S3", "S4", "S5", "S6", "S7", "S8", "RS3", "RS4", "RS5", "RS6", "RS7", "RS Q3", "RS Q8", "TT", "TT Roadster"],
+    "AVATR": ["AVATR 07", "AVATR 11"],
+    "BAIC": ["X55", "X35", "BJ40", "BJ40 Plus", "BJ60", "BJ80", "U5 Plus", "EU5"],
+    "Bentley": ["Bentayga", "Continental GT", "Continental GTC", "Flying Spur", "Mulsanne"],
+    "BMW": ["1 Series", "2 Series", "3 Series", "4 Series", "5 Series", "6 Series", "7 Series", "8 Series", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "Z4", "iX1", "iX", "i4", "i5", "i7", "iX3", "M2", "M3", "M4", "M5", "M8", "XM"],
+    "BYD": ["SEAGULL", "ATTO 2", "ATTO 3", "DOLPHIN", "M6", "SEAL", "SEAL 5 DM-i", "SEAL 6", "SEALION 6 DM-i", "SEALION 7", "SHARK 6", "HAN", "TANG", "DOLPHIN Mini"],
+    "Changan": ["Lumin", "NEVO Q05", "DEEPAL S05", "DEEPAL S05 REEV", "DEEPAL S07", "DEEPAL L07", "DEEPAL E07", "Hunter K50"],
+    "Chery": ["CHERY Q", "V23", "TIGGO 7", "TIGGO 8 CSH", "OMODA C5"],
+    "Chevrolet": ["Captiva", "Trailblazer", "Colorado", "Cruze", "Sonic", "Spin", "Optra", "Aveo", "Camaro"],
+    "Citroën": ["C3", "C4", "C5 Aircross", "C5 X", "DS3", "DS4", "DS5", "DS7"],
+    "Daewoo": ["Matiz", "Espero", "Nubira", "Lanos", "Leganza", "Korando"],
+    "Daihatsu": ["Mira", "Charade", "Terios", "Copen", "Hijet", "Rocky", "Sirion", "YRV", "Move", "Tanto", "Atrai"],
+    "Dodge": ["Challenger", "Charger", "Durango", "Ram"],
+    "Datsun": ["120Y", "Sunny", "Bluebird", "Go", "Go+", "on-DO", "mi-DO"],
+    "Deepal": ["S05", "S05 REEV", "S07", "L07", "E07"],
+    "Dongfeng/Forthing": ["Forthing Friday", "Forthing T5 EVO", "Forthing Yacht"],
+    "Ferrari": ["296 GTB", "296 GTS", "Roma", "Roma Spider", "SF90 Stradale", "SF90 Spider", "Purosangue", "812 Superfast", "812 GTS", "F8 Tributo", "Portofino", "California T", "488 GTB", "488 Spider"],
+    "Fiat": ["500", "500C", "500X", "Panda", "Tipo", "Doblo", "Ducato", "Punto", "Abarth 595 / 695"],
+    "Ford": ["Ranger", "Ranger Raptor", "Everest", "Mustang", "Mustang Mach-E", "Territory", "Transit", "Transit Custom", "EcoSport", "Fiesta", "Focus", "Escape", "Explorer", "Everest Sport"],
+    "Foton": ["Tunland", "Tunland G7", "Tunland V", "View", "Miler", "Aumark", "Auman"],
+    "GAC": ["AION UT", "AION Y Plus", "AION V", "AION ES", "HYPTEC HT", "HYPTEC SSR", "M8 PHEV"],
+    "Geely": ["EX2", "EX5", "Emgrand", "Coolray", "Geometry C"],
+    "GMC": ["Canyon", "Sierra", "Yukon", "Yukon XL", "Hummer EV", "Hummer EV SUV"],
+    "Great Wall Motor (GWM)": ["ORA Good Cat", "ORA 07", "HAVAL JOLION", "HAVAL H6", "HAVAL H6 HEV/PHEV", "TANK 300", "TANK 500", "POER", "POER SAHAR"],
+    "Haval": ["H6", "H6 HEV", "H6 PHEV", "JOLION", "JOLION HEV"],
+    "Honda": ["City", "City Hatchback", "Civic", "Civic Type R", "Accord", "HR-V", "CR-V", "WR-V", "BR-V", "e:N1", "e:N2", "Super-ONE", "STEP WGN"],
+    "Hyundai": ["Stargazer", "Creta", "Santa Fe", "IONIQ 5", "IONIQ 6", "Kona", "Tucson", "H-1", "Staria", "Palisade", "Elantra", "Veloster"],
+    "Infiniti": ["Q30", "Q50", "Q60", "QX30", "QX50", "QX55", "QX60", "QX80", "FX", "EX"],
+    "Isuzu": ["D-Max", "D-Max X-Series", "D-Max V-Cross", "MU-X", "MU-7", "MU-X รุ่นเก่า", "Adventure Master", "Rodeo", "TFR", "Dragon Power", "Cameo"],
+    "Jaguar": ["XE", "XF", "XJ", "F-Type", "E-Pace", "F-Pace", "I-Pace"],
+    "Jeep": ["Wrangler", "Gladiator", "Grand Cherokee", "Cherokee", "Renegade", "Compass", "Commander"],
+    "JAECOO": ["JAECOO 5 EV", "JAECOO 6 EV", "JAECOO 6T EV", "JAECOO 6T REEV", "JAECOO 7 SHS"],
+    "Kia": ["Carnival", "EV5", "EV6", "EV9", "Sorento", "Seltos", "Sportage", "K3", "K5", "Picanto", "Cerato", "Soul", "Stonic"],
+    "Lamborghini": ["Urus", "Urus S", "Urus Performante", "Urus SE", "Revuelto", "Huracán", "Aventador", "Gallardo"],
+    "Land Rover": ["Defender", "Discovery", "Discovery Sport", "Range Rover", "Range Rover Sport", "Range Rover Velar", "Range Rover Evoque"],
+    "Lexus": ["LBX", "UX", "NX", "RX", "RZ", "ES", "IS", "LS", "LM", "LX", "LC", "RC", "CT"],
+    "Lotus": ["Elise", "Exige", "Evora", "Emira", "Eletre", "Emeya"],
+    "Maserati": ["Ghibli", "Quattroporte", "Levante", "Grecale", "GranTurismo", "GranCabrio", "MC20", "MC20 Cielo"],
+    "Mazda": ["Mazda2", "Mazda3", "CX-3", "CX-30", "CX-5", "CX-8", "CX-9", "CX-60", "CX-80", "MX-5", "BT-50", "RX-8"],
+    "McLaren": ["570S", "570GT", "600LT", "650S", "675LT", "720S", "750S", "765LT", "Artura", "GT", "Senna", "Speedtail"],
+    "Mercedes-Benz": ["A-Class", "B-Class", "C-Class", "E-Class", "S-Class", "CLA", "CLS", "GLA", "GLB", "GLC", "GLE", "GLS", "G-Class", "EQB", "EQE", "EQE SUV", "EQS", "EQS SUV", "EQA", "SL", "CLE", "AMG GT", "V-Class", "Sprinter"],
+    "MG": ["MG3", "MG5", "MG4", "MG ZS", "MG ZS EV", "MG VS HEV", "MG HS", "MG HS PHEV", "MG S5 EV", "MG ES", "MG EP", "MG EP Plus", "MG Extender", "MG Maxus 7", "MG Maxus 9", "MG IM6", "MG Cyberster", "MG4 Electric"],
+    "MINI": ["Cooper", "Cooper S", "Cooper SE", "Countryman", "Countryman SE", "Clubman", "Clubman S", "Clubman JCW", "Clubman SE", "Aceman"],
+    "Mitsubishi": ["Mirage", "Attrage", "Triton", "Triton Athlete", "Pajero Sport", "Xpander", "Xpander Cross", "Outlander PHEV", "Eclipse Cross", "Pajero", "Lancer", "Lancer EX", "Galant", "Space Wagon"],
+    "NETA": ["V", "V-II", "X", "GT", "Aya"],
+    "Nissan": ["Almera", "Kicks e-POWER", "Leaf", "Navara", "Terra", "Serena", "X-Trail", "Sylphy", "Teana", "March", "Note", "Juke", "370Z", "GT-R", "Urvan"],
+    "OMODA": ["OMODA C5", "OMODA C5 EV"],
+    "Peugeot": ["2008", "3008", "408", "5008", "508", "3008 GT", "Traveller", "Partner"],
+    "Polestar": ["Polestar 2", "Polestar 3", "Polestar 4"],
+    "Porsche": ["718 Cayman", "718 Boxster", "911", "Taycan", "Macan", "Cayenne", "Panamera"],
+    "Proton": ["Saga", "Persona", "Iriz", "Exora", "X50", "X70", "X90", "Satria Neo", "Waja", "Gen.2", "Savvy"],
+    "RAM": ["1500", "1500 Classic", "1500 TRX", "2500", "3500"],
+    "Renault": ["Clio", "Captur", "Megane", "Koleos", "Arkana", "Zoe", "Duster", "Master", "Trafic"],
+    "Riddara": ["RD6", "RD6 4WD"],
+    "Rolls-Royce": ["Ghost", "Phantom", "Cullinan", "Spectre", "Dawn", "Wraith", "Silver Shadow", "Silver Spirit", "Silver Seraph"],
+    "Saab": ["9-3", "9-5", "900", "9000", "9-7X"],
+    "SEAT": ["Ibiza", "Leon", "Toledo", "Altea", "Ateca", "Arona", "Tarraco"],
+    "Škoda": ["Fabia", "Octavia", "Superb", "Karoq", "Kodiaq", "Kamiq", "Enyaq"],
+    "Subaru": ["BRZ", "Forester", "Crosstrek", "Outback", "WRX", "WRX STI", "XV", "Impreza", "Legacy", "Levorg", "XV Hybrid"],
+    "Suzuki": ["Swift", "Celerio", "Ciaz", "Ertiga", "XL7", "Jimny", "Carry", "Wagon R", "SX4", "Vitara", "Grand Vitara"],
+    "TATA": ["Xenon", "Super Ace", "Xenon Single Cab", "Xenon Double Cab", "Prima", "Ultra"],
+    "Tesla": ["Model 3", "Model Y", "Model S", "Model X", "Cybertruck"],
+    "Thairung / Thai Rung": ["Adventure", "Transformer", "Transformer II", "Transformer MAX", "TR Allspace", "TR MUV", "Sport Rider", "Sport Cruiser", "Exceed"],
+    "Toyota": ["Yaris", "Yaris ATIV", "Yaris Cross", "Corolla Altis", "Corolla Cross", "Camry", "Vios", "C-HR", "Prius", "Sienta", "Veloz", "Innova", "Innova Zenix", "Fortuner", "Hilux Revo", "Hilux Champ", "Hilux Revo Rocco", "Land Cruiser", "Land Cruiser Prado", "Alphard", "Vellfire", "Majesty", "Commuter", "Hiace", "Coaster", "GR86", "GR Supra", "GR Yaris", "GR Corolla", "bZ4X", "C+pod"],
+    "Volkswagen": ["Golf", "Polo", "Passat", "Tiguan", "Touareg", "T-Roc", "Arteon", "ID.4", "ID. Buzz", "Caravelle", "Transporter", "Multivan"],
+    "Volvo": ["EX30", "EX40", "EC40", "EX90", "XC40", "XC60", "XC90", "S60", "S90", "V60", "V90", "C40", "V40"],
+    "Wuling": ["Air EV", "Binguo EV", "Cloud EV", "Starlight", "Starlight Darion", "Almaz", "Confero", "Cortez"],
+    "XPeng": ["G6", "G9", "X9", "P7"],
+    "Zeekr": ["X", "7X", "009", "001"]
+};
+function filterCarModels() {
+    const brandInput = document.getElementById('car_brand').value.trim();
+    const modelListSelect = document.getElementById('modelList');
+    const modelInput = document.getElementById('car_model_name');
+    modelListSelect.innerHTML = "";
+    const matchedBrand = Object.keys(carModelsDatabase).find(b => b.toLowerCase() === brandInput.toLowerCase());
+    if (matchedBrand) {
+        carModelsDatabase[matchedBrand].forEach(model => {
+            const option = document.createElement('option');
+            option.value = model;
+            modelListSelect.appendChild(option);
+        });
+        modelInput.placeholder = "เลือกหรือพิมพ์รุ่นรถ...";
+    } else {
+        modelInput.placeholder = "พิมพ์รุ่นรถ...";
+    }
+}
+document.getElementById('car_brand').addEventListener('input', filterCarModels);
+document.getElementById('car_brand').addEventListener('change', filterCarModels);
+const carBrandInput = document.getElementById('car_brand');
+const carModelInput = document.getElementById('car_model_name');
+const thaiTooltip = document.getElementById('thaiWarningTooltip');
+let mouseX = 0;
+let mouseY = 0;
+let tooltipTimeout = null;
+document.addEventListener('mousemove', function(e) {
+    mouseX = e.clientX + 15;
+    mouseY = e.clientY + 15;
+});
+function handleEnglishOnlyInput(e) {
+    const inputField = e.target;
+    const originalValue = inputField.value;
+    const thaiRegex = /[\u0E00-\u0E7F]/g;
+    
+    if (thaiRegex.test(originalValue)) {
+        inputField.value = originalValue.replace(thaiRegex, '');
+        if (thaiTooltip) {
+            thaiTooltip.style.left = mouseX + 'px';
+            thaiTooltip.style.top = mouseY + 'px';
+            thaiTooltip.style.display = 'block';
+            
+            clearTimeout(tooltipTimeout);
+            tooltipTimeout = setTimeout(() => {
+                thaiTooltip.style.display = 'none';
+            }, 1500);
+        }
+    }
+}
+if (carBrandInput) {
+    carBrandInput.addEventListener('input', handleEnglishOnlyInput);
+}
+if (carModelInput) {
+    carModelInput.addEventListener('input', handleEnglishOnlyInput);
+}
+</script>
+</body>
+</html>

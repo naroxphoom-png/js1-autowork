@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ห้องอะไหล่ & สถานะศูนย์บริการ - JS1 Autowork</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- SheetJS สำหรับ Export Excel -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- html2canvas สำหรับแปลง Modal เป็นรูปภาพ -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<style>
+body { background-color: #e2e8f0; color: #020617; font-family: 'Segoe UI', Thonburi, Tahoma, sans-serif; }
+.header-card-minimal { background: #ffffff; border-radius: 8px; padding: 6px 14px !important; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06); border: 1px solid #cbd5e1; }
+.table-responsive { border-radius: 10px; box-shadow: 0 4px 15px rgba(15, 23, 42, 0.1); background-color: #ffffff; border: 2px solid #94a3b8; overflow: hidden; }
+.table-custom { background-color: #ffffff; color: #020617; margin-bottom: 0; }
+.table-custom td { border-color: #cbd5e1 !important; color: #0f172a; font-weight: 600; padding: 2px 2px !important; }
+.th-team-1 { background-color: #16a34a !important; color: #ffffff !important; }
+.th-team-2 { background-color: #15803d !important; color: #ffffff !important; }
+.th-team-3 { background-color: #166534 !important; color: #ffffff !important; }
+.th-subaru { background-color: #1e40af !important; color: #ffffff !important; }
+.table-custom th { font-weight: 800 !important; letter-spacing: 0.3px; font-size: 0.75rem; padding: 3px 2px !important; }
+.table-compact td, .table-compact th { padding: 2px 2px !important; font-size: 0.73rem !important; vertical-align: middle; }
+.team-header { padding: 4px 8px; border-radius: 6px 6px 0 0; border-left: 5px solid; font-size: 0.8rem; font-weight: 800; margin-bottom: 0; }
+.team-1-header { border-left-color: #16a34a; background-color: #15803d; color: #ffffff; }
+.team-2-header { border-left-color: #15803d; background-color: #166534; color: #ffffff; }
+.team-3-header { border-left-color: #166534; background-color: #14532d; color: #ffffff; }
+.team-subaru-header { border-left-color: #1e3a8a; background-color: #1e40af; color: #ffffff; margin-top: 8px; }
+.wholesale-header { border-left-color: #0284c7; background-color: #0ea5e9; color: #ffffff; margin-top: 4px; }
+.clickable-order:hover { background-color: #f1f5f9; cursor: pointer; text-decoration: underline; color: #0284c7; }
+.btn-micro { padding: 2px 4px; font-size: 0.65rem; border-radius: 4px; line-height: 1.2; font-weight: bold; }
+/* สไตล์ป้ายสถานะมาตรฐานตรงตามหน้า index */
+.status-badge-quoting { background-color: #0ea5e9 !important; color: #ffffff !important; } 
+.status-badge-waiting { background-color: #f59e0b !important; color: #000000 !important; } 
+.status-badge-contact { background-color: #ef4444 !important; color: #ffffff !important; } 
+.status-badge-ordering { background-color: #8b5cf6 !important; color: #ffffff !important; } 
+.status-badge-repairing { background-color: #64748b !important; color: #ffffff !important; } 
+.status-badge-ordered { background-color: #3b82f6 !important; color: #ffffff !important; } 
+.status-badge-arrived { background-color: #10b981 !important; color: #ffffff !important; } 
+/* Timeline Tracking Style */
+.tracking-timeline { position: relative; padding-left: 20px; border-left: 2px solid #0ea5e9; margin-left: 10px; }
+.tracking-step { position: relative; margin-bottom: 15px; }
+.tracking-step::before { content: ''; position: absolute; left: -26px; top: 2px; width: 10px; height: 10px; border-radius: 50%; background-color: #0ea5e9; border: 2px solid #fff; }
+.tracking-time { font-size: 0.68rem; color: #64748b; font-weight: bold; }
+.tracking-status { font-weight: 800; font-size: 0.82rem; color: #0f172a; }
+.tracking-person { font-size: 0.75rem; color: #15803d; font-weight: 700; }
+@keyframes blinkWarning { 0% { background-color: #ffffff; } 50% { background-color: #fee2e2; color: #b91c1c; } 100% { background-color: #ffffff; } }
+.blink-alert { animation: blinkWarning 1s infinite; }
+</style>
+</head>
+<body>
+<div class="container-fluid py-2">
+<!-- Header Bar -->
+<div class="row align-items-center mb-2 header-card-minimal mx-0">
+<div class="col-lg-5 text-center text-lg-start d-flex align-items-center gap-2 flex-wrap">
+<div class="d-inline-flex align-items-center bg-light px-2 py-1 rounded border border-secondary-subtle">
+<label class="me-2 text-primary fw-bold small" style="font-size:0.75rem;">วันที่ประวัติ:</label>
+<input type="date" id="filter_date" class="form-control form-control-sm bg-white text-dark border-0 p-0 fw-bold" style="font-size:0.78em; width:125px;" onchange="loadJobs(); loadWholesaleJobs(); loadDeleteLogs();">
+</div>
+</div>
+<div class="col-lg-3 text-center">
+<h4 class="text-dark mb-0 fw-bold" style="color: #020617; font-weight:800; font-size: 1.1rem;">ห้องอะไหล่ JS1Autowork</h4>
+</div>
+<div class="col-lg-4 text-center text-lg-end d-flex justify-content-end align-items-center gap-2">
+<button class="btn btn-success btn-sm fw-bold shadow-sm py-1 px-2" style="font-size: 0.72rem;" onclick="exportWholesaleToExcel()">📊 โหลดข้อมูลค้าส่ง</button>
+<button class="btn btn-secondary btn-sm fw-bold shadow-sm py-1 px-2" style="font-size: 0.72rem;" onclick="openDeleteLogsModal()">📋 รายงานประวัติการลบ</button>
+<span id="liveClock" class="badge bg-primary text-white px-2 py-1 rounded shadow-sm fw-bold" style="font-size: 0.75rem;">กำลังโหลดเวลา...</span>
+</div>
+</div>
+<!-- ช่องค้นหาทะเบียน -->
+<div class="d-flex flex-wrap justify-content-start align-items-center mb-2 mx-0 gap-2">
+<div class="input-group input-group-sm shadow-sm" style="max-width: 260px;">
+<span class="input-group-text bg-white text-success border-end-0 fw-bold px-2" style="font-size:0.72rem;">🔍</span>
+<input type="text" id="search_license_plate" class="form-control form-control-sm border-start-0 text-success fw-bold ps-0" placeholder="ค้นหาเลขทะเบียนรถ..." oninput="filterTablesByLicensePlate()" style="font-size: 0.75rem;">
+<button class="btn btn-outline-secondary btn-sm px-2" type="button" style="font-size: 0.7rem;" onclick="clearSearch()">✕</button>
+</div>
+</div>
+<!-- ========================================== -->
+<!-- 1. ตารางลูกค้าค้าส่งประจำวัน -->
+<!-- ========================================== -->
+<h6 class="team-header wholesale-header d-flex justify-content-between align-items-center">
+    <div>
+        <span>📦 รายการลูกค้าค้าส่งประจำวัน (<span id="total-wholesale">รวม: 0 รายการ</span>)</span>
+    </div>
+</h6>
+<div class="table-responsive mb-2">
+    <table class="table table-custom table-bordered table-compact align-middle text-center">
+        <thead>
+            <tr style="background-color: #38bdf8 !important; color: #0f172a !important;">
+                <th style="width:5%">เวลาที่บันทึก</th>
+                <th style="width:5%">ผู้รับเรื่อง</th>
+                <th style="width:13%">ชื่อลูกค้า</th>
+                <th style="width:30%">รายการที่สั่ง</th>
+                <th style="width:6%">เวลา</th>
+                <th style="width:14%">สถานะ</th>
+                <th style="width:5%">จัดการ</th>
+            </tr>
+        </thead>
+        <tbody id="tbody-wholesale">
+            <tr><td colspan="7" class="text-muted py-2 fw-bold" style="font-size:0.7rem;">ไม่มีรายการค้าส่ง</td></tr>
+        </tbody>
+    </table>
+</div>
+<!-- ตารางทีม 1, 2, 3 (กำลังทำ) -->
+<div class="row gx-2 align-items-start">
+<div class="col-lg-4 mb-2">
+<h6 class="team-header team-1-header d-flex justify-content-between align-items-center">
+<div>
+<span>ทีม 1 ช่างญา (<span id="total-team-1">รวม: 0 คัน</span>)</span>
+</div>
+<span class="badge bg-light text-dark px-2 py-1 shadow-sm fw-bold" id="badge-team-1" style="font-size: 0.7rem;">กำลังทำ: 0 คัน</span>
+</h6>
+<div class="table-responsive">
+<table class="table table-custom table-bordered table-compact align-middle text-center">
+<thead><tr class="th-team-1"><th style="width:26%">รุ่น/ทะเบียน</th><th style="width:35%">รายการ</th><th style="width:12%">นัดส่ง</th><th style="width:10%">รอ</th><th style="width:17%">สถานะ</th></tr></thead>
+<tbody id="tbody-team-1"></tbody>
+</table>
+</div>
+</div>
+<div class="col-lg-4 mb-2">
+<h6 class="team-header team-2-header d-flex justify-content-between align-items-center">
+<div>
+<span>ทีม 2 ช่างเรศ (<span id="total-team-2">รวม: 0 คัน</span>)</span>
+</div>
+<span class="badge bg-light text-dark px-2 py-1 shadow-sm fw-bold" id="badge-team-2" style="font-size: 0.7rem;">กำลังทำ: 0 คัน</span>
+</h6>
+<div class="table-responsive">
+<table class="table table-custom table-bordered table-compact align-middle text-center">
+<thead><tr class="th-team-2"><th style="width:26%">รุ่น/ทะเบียน</th><th style="width:35%">รายการ</th><th style="width:12%">นัดส่ง</th><th style="width:10%">รอ</th><th style="width:17%">สถานะ</th></tr></thead>
+<tbody id="tbody-team-2"></tbody>
+</table>
+</div>
+</div>
+<div class="col-lg-4 mb-2">
+<h6 class="team-header team-3-header d-flex justify-content-between align-items-center">
+<div>
+<span>ทีม 3 ช่างเจตต์ (<span id="total-team-3">รวม: 0 คัน</span>)</span>
+</div>
+<span class="badge bg-light text-dark px-2 py-1 shadow-sm fw-bold" id="badge-team-3" style="font-size: 0.7rem;">กำลังทำ: 0 คัน</span>
+</h6>
+<div class="table-responsive">
+<table class="table table-custom table-bordered table-compact align-middle text-center">
+<thead><tr class="th-team-3"><th style="width:26%">รุ่น/ทะเบียน</th><th style="width:35%">รายการ</th><th style="width:12%">นัดส่ง</th><th style="width:10%">รอ</th><th style="width:17%">สถานะ</th></tr></thead>
+<tbody id="tbody-team-3"></tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- ตารางทีม Subaru -->
+<div id="container-team-subaru" style="display: none;">
+<h6 class="team-header team-subaru-header d-flex justify-content-between align-items-center">
+<div>
+<span>ทีม Subaru (<span id="total-team-subaru">รวม: 0 คัน</span>)</span>
+</div>
+<span class="badge bg-light text-dark px-2 py-1 shadow-sm fw-bold" id="badge-team-subaru" style="font-size: 0.7rem;">กำลังทำ: 0 คัน</span>
+</h6>
+<div class="table-responsive mb-2">
+<table class="table table-custom table-bordered table-compact align-middle text-center">
+<thead><tr class="th-subaru"><th style="width:26%">รุ่น/ทะเบียน</th><th style="width:35%">รายการ</th><th style="width:12%">นัดส่ง</th><th style="width:10%">รอ</th><th style="width:17%">สถานะ</th></tr></thead>
+<tbody id="tbody-team-subaru"></tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- ========================================== -->
+<!-- MODALS -->
+<!-- ========================================== -->
+<!-- Modal สำหรับห้องอะไหล่ กรอกและอัปเดตข้อมูลอะไหล่ -->
+<div class="modal fade" id="sparePartModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header text-white py-2" style="background-color: #8b5cf6;">
+                <h5 class="modal-title fs-6 fw-bold">⚙️ จัดการข้อมูลการสั่งอะไหล่</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="spare_job_id">
+                <div class="mb-2">
+                    <label class="form-label fw-bold small">ทะเบียนรถ:</label>
+                    <input type="text" id="spare_car_info" class="form-control form-control-sm bg-light" readonly>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-bold small">สถานะการสั่งอะไหล่:</label>
+                    <select id="spare_status_select" class="form-select form-select-sm" onchange="toggleSpareInputFields()">
+                        <option value="รอสั่งอะไหล่">รอสั่งอะไหล่</option>
+                        <option value="สั่งอะไหล่แล้ว">สั่งอะไหล่แล้ว</option>
+                        <option value="อะไหล่มาถึงแล้ว">อะไหล่มาถึงแล้ว</option>
+                    </select>
+                </div>
+                <div id="div_spare_details_area">
+                    <div class="mb-2">
+                        <label class="form-label fw-bold small text-primary">รายการอะไหล่ที่สั่ง / ร้านค้า / ใบสั่งซื้อ:</label>
+                        <textarea id="spare_details_input" class="form-control form-control-sm" rows="3" placeholder="กรอกรายละเอียดอะไหล่ที่สั่ง..."></textarea>
+                    </div>
+                    <div class="mb-2" id="div_spare_eta">
+                        <label class="form-label fw-bold small text-primary">วันที่คาดว่าจะได้รับอะไหล่:</label>
+                        <input type="date" id="spare_eta_input" class="form-control form-control-sm">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer py-1">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">ยกเลิก</button>
+                <button type="button" class="btn btn-primary btn-sm fw-bold" onclick="saveSparePartData()">บันทึกข้อมูล</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modal Pop-up แสดงรายละเอียดอะไหล่ที่บันทึกไว้อย่างครบถ้วน -->
+<div class="modal fade" id="spareDetailViewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-success text-white py-2">
+                <h5 class="modal-title fs-6 fw-bold">📦 รายละเอียดข้อมูลการสั่งอะไหล่</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="spareDetailContentBody">
+                <!-- เนื้อหาจะถูกสร้างผ่าน JS -->
+            </div>
+            <div class="modal-footer py-1">
+                <button type="button" class="btn btn-primary btn-sm fw-bold text-white" id="btnUpdateStatusFromView" onclick="">🔄 อัพเดทสถานะ</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modal สำหรับแก้ไขรายการที่สั่ง (ลูกค้าค้าส่ง) -->
+<div class="modal fade" id="editWholesaleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-warning text-dark py-2">
+                <h5 class="modal-title fs-6 fw-bold">✏️ แก้ไขรายการที่สั่ง</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="edit_wholesale_id">
+                <div class="mb-2">
+                    <label class="form-label fw-bold small">ชื่อลูกค้า:</label>
+                    <input type="text" id="edit_customer_name" class="form-control form-control-sm" readonly>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-bold small">รายการที่สั่ง:</label>
+                    <textarea id="edit_order_details" class="form-control form-control-sm" rows="3"></textarea>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-bold small text-success">ลงชื่อผู้บันทึกการแก้ไข (บังคับระบุ):</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        <div><input type="radio" class="btn-check" name="edit_author" id="author_sam" value="สาม"><label class="btn btn-outline-success btn-sm px-2 py-1 fw-bold" style="font-size:0.75rem;" for="author_sam">สาม</label></div>
+                        <div><input type="radio" class="btn-check" name="edit_author" id="author_pat" value="แพต"><label class="btn btn-outline-success btn-sm px-2 py-1 fw-bold" style="font-size:0.75rem;" for="author_pat">แพต</label></div>
+                        <div><input type="radio" class="btn-check" name="edit_author" id="author_phupha" value="ภูผา"><label class="btn btn-outline-success btn-sm px-2 py-1 fw-bold" style="font-size:0.75rem;" for="author_phupha">ภูผา</label></div>
+                        <div><input type="radio" class="btn-check" name="edit_author" id="author_joe" value="โจ้"><label class="btn btn-outline-success btn-sm px-2 py-1 fw-bold" style="font-size:0.75rem;" for="author_joe">โจ้</label></div>
+                        <div><input type="radio" class="btn-check" name="edit_author" id="author_ael" value="แอล"><label class="btn btn-outline-success btn-sm px-2 py-1 fw-bold" style="font-size:0.75rem;" for="author_ael">แอล</label></div>
+                        <div><input type="radio" class="btn-check" name="edit_author" id="author_poon" value="ป๋ารุณ"><label class="btn btn-outline-success btn-sm px-2 py-1 fw-bold" style="font-size:0.75rem;" for="author_poon">ป๋ารุณ</label></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer py-1">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">ยกเลิก</button>
+                <button type="button" class="btn btn-warning btn-sm fw-bold" onclick="confirmEditWholesale()">บันทึกการแก้ไข</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modal ประวัติแก้ไข -->
+<div class="modal fade" id="editLogsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-secondary text-white py-2">
+                <h5 class="modal-title fs-6 fw-bold">📜 ประวัติการแก้ไขรายการที่สั่ง</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-2">
+                <div class="table-responsive">
+                    <table class="table table-custom table-bordered table-compact align-middle text-center">
+                        <thead>
+                            <tr style="background-color: #475569 !important; color: #ffffff !important;">
+                                <th style="width:25%">เวลาที่แก้ไข</th>
+                                <th style="width:20%">ผู้แก้ไข</th>
+                                <th style="width:55%">รายละเอียดการแก้ไข</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-edit-logs">
+                            <tr><td colspan="3" class="text-muted py-2 fw-bold" style="font-size:0.7rem;">ไม่มีประวัติการแก้ไข</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer py-1">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">ปิด</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modal Tracking สถานะ -->
+<div class="modal fade" id="trackingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-info text-dark py-2">
+                <h5 class="modal-title fs-6 fw-bold">🚚 ประวัติสถานะการดำเนินงาน (Tracking)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div id="trackingTimelineArea" class="tracking-timeline"></div>
+            </div>
+            <div class="modal-footer py-1">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">ปิด</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modal เปลี่ยนสถานะค้าส่ง -->
+<div class="modal fade" id="statusWholesaleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-info text-dark py-2">
+                <h5 class="modal-title fs-6 fw-bold">🔄 อัปเดตสถานะค้าส่ง</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="status_wholesale_id">
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">เลือกสถานะ:</label>
+                    <select id="select_status_type" class="form-select form-select-sm" onchange="toggleStatusInput()">
+                        <option value="รับเรื่องแล้ว">รับเรื่องแล้ว</option>
+                        <option value="กำลังจัดอะไหล่">กำลังจัดอะไหล่</option>
+                        <option value="จัดเสร็จแล้ว พร้อมส่งหน้าร้าน">จัดเสร็จแล้ว พร้อมส่งหน้าร้าน</option>
+                        <option value="จัดเสร็จแล้ว พร้อมส่งขนส่ง">จัดเสร็จแล้ว พร้อมส่งขนส่ง</option>
+                    </select>
+                </div>
+                <div class="mb-3" id="div_status_person">
+                    <label class="form-label fw-bold small text-success">เลือกชื่อผู้ดำเนินการ (บังคับระบุ):</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        <div><input type="radio" class="btn-check" name="status_person_radio" id="p_sam" value="สาม"><label class="btn btn-outline-success btn-sm px-2 py-1 fw-bold" style="font-size:0.75rem;" for="p_sam">สาม</label></div>
+                        <div><input type="radio" class="btn-check" name="status_person_radio" id="p_pat" value="แพต"><label class="btn btn-outline-success btn-sm px-2 py-1 fw-bold" style="font-size:0.75rem;" for="p_pat">แพต</label></div>
+                        <div><input type="radio" class="btn-check" name="status_person_radio" id="p_phupha" value="ภูผา"><label class="btn btn-outline-success btn-sm px-2 py-1 fw-bold" style="font-size:0.75rem;" for="p_phupha">ภูผา</label></div>
+                        <div><input type="radio" class="btn-check" name="status_person_radio" id="p_joe" value="โจ้"><label class="btn btn-outline-success btn-sm px-2 py-1 fw-bold" style="font-size:0.75rem;" for="p_joe">โจ้</label></div>
+                        <div><input type="radio" class="btn-check" name="status_person_radio" id="p_ael" value="แอล"><label class="btn btn-outline-success btn-sm px-2 py-1 fw-bold" style="font-size:0.75rem;" for="p_ael">แอล</label></div>
+                        <div><input type="radio" class="btn-check" name="status_person_radio" id="p_poon" value="ป๋ารุณ"><label class="btn btn-outline-success btn-sm px-2 py-1 fw-bold" style="font-size:0.75rem;" for="p_poon">ป๋ารุณ</label></div>
+                    </div>
+                </div>
+                <div class="mb-3" id="div_carrier_name" style="display:none;">
+                    <label class="form-label fw-bold small text-danger">พิมพ์กรอกข้อมูลชื่อขนส่ง (บังคับระบุ):</label>
+                    <input type="text" id="input_carrier_name" class="form-control form-control-sm" placeholder="ระบุชื่อขนส่ง เช่น Flash, J&T, Kerry...">
+                </div>
+            </div>
+            <div class="modal-footer py-1">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">ยกเลิก</button>
+                <button type="button" class="btn btn-info btn-sm fw-bold text-dark" onclick="confirmUpdateStatus()">อัปเดตสถานะ</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modal ลบรายการค้าส่ง -->
+<div class="modal fade" id="deleteWholesaleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white py-2">
+                <h5 class="modal-title fs-6 fw-bold">⚠️ ยืนยันการลบรายการค้าส่ง</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="delete_wholesale_id">
+                <div class="mb-2">
+                    <label class="form-label fw-bold small text-danger">รหัสผ่านยืนยัน:</label>
+                    <input type="password" id="delete_password" class="form-control form-control-sm" placeholder="กรอกรหัสผ่าน...">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-bold small text-danger">เหตุผลในการลบ (บังคับกรอก):</label>
+                    <textarea id="delete_reason" class="form-control form-control-sm" rows="3" placeholder="ระบุเหตุผลที่ต้องลบรายการนี้..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer py-1">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">ยกเลิก</button>
+                <button type="button" class="btn btn-danger btn-sm fw-bold" onclick="confirmDeleteWholesale()">ยืนยันการลบ</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modal ประวัติการลบ -->
+<div class="modal fade" id="deleteLogsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-secondary text-white py-2">
+                <h5 class="modal-title fs-6 fw-bold">📋 รายงานประวัติการลบรายการลูกค้าค้าส่ง</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-2">
+                <div class="table-responsive">
+                    <table class="table table-custom table-bordered table-compact align-middle text-center">
+                        <thead>
+                            <tr style="background-color: #475569 !important; color: #ffffff !important;">
+                                <th style="width:20%">เวลาที่ลบ</th>
+                                <th style="width:22%">ชื่อลูกค้า</th>
+                                <th style="width:33%">รายการที่ถูกลบ</th>
+                                <th style="width:25%">เหตุผลในการลบ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-delete-logs">
+                            <tr><td colspan="4" class="text-muted py-2 fw-bold" style="font-size:0.7rem;">ไม่มีประวัติการลบ</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer py-1">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">ปิด</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+document.getElementById('filter_date').value = todayStr;
+let globalJobsData = [];
+let globalWholesaleJobs = [];
+function updateClock() {
+    const now = new Date();
+    const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+    document.getElementById('liveClock').textContent = `🕒 ${now.toLocaleDateString('th-TH', options)}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+function loadJobs() {
+    const selectedDate = document.getElementById('filter_date').value;
+    fetch(`/api/jobs?date=${selectedDate}`)
+        .then(res => res.json())
+        .then(data => {
+            globalJobsData = data.jobs || [];
+            renderPage();
+        })
+        .catch(err => console.error("Error loading jobs:", err));
+}
+function loadWholesaleJobs() {
+    const selectedDate = document.getElementById('filter_date').value;
+    fetch(`/api/wholesale/jobs?date=${selectedDate}`)
+        .then(res => res.json())
+        .then(data => {
+            globalWholesaleJobs = data.jobs || [];
+            renderWholesaleTable(globalWholesaleJobs);
+        })
+        .catch(err => console.error("Error loading wholesale jobs:", err));
+}
+function loadDeleteLogs() {
+    fetch(`/api/wholesale/delete-logs`)
+        .then(res => res.json())
+        .then(data => {
+            renderDeleteLogsTable(data.logs || []);
+        })
+        .catch(err => console.error("Error loading delete logs:", err));
+}
+socket.on('data_updated', () => { 
+    loadJobs(); 
+    loadWholesaleJobs(); 
+    loadDeleteLogs();
+});
+function clearSearch() {
+    document.getElementById('search_license_plate').value = '';
+    filterTablesByLicensePlate();
+}
+// ----------------------------------------------------
+// ฟังก์ชันแปลงวันที่เป็นรูปแบบไทย (วัน/เดือน/ปี พ.ศ.)
+// ----------------------------------------------------
+function formatThaiDate(dateString) {
+    if (!dateString) return '-';
+    let d = new Date(dateString);
+    if (isNaN(d.getTime())) return dateString;
+    let day = String(d.getDate()).padStart(2, '0');
+    let month = String(d.getMonth() + 1).padStart(2, '0');
+    let year = d.getFullYear() + 543;
+    return `${day}/${month}/${year}`;
+}
+// ----------------------------------------------------
+// ฟังก์ชันเปิดและจัดการเกี่ยวกับ Modal อะไหล่
+// ----------------------------------------------------
+function openSparePartModal(jobId, carModel, plate, currentStatus, currentSpareDetails, currentSpareEta) {
+    document.getElementById('spare_job_id').value = jobId;
+    document.getElementById('spare_car_info').value = `${carModel || ''} (${plate || ''})`;
+    
+    let selectEl = document.getElementById('spare_status_select');
+    let baseStatus = 'รอสั่งอะไหล่';
+    if (currentStatus.includes('สั่งอะไหล่แล้ว')) baseStatus = 'สั่งอะไหล่แล้ว';
+    else if (currentStatus.includes('อะไหล่มาถึงแล้ว')) baseStatus = 'อะไหล่มาถึงแล้ว';
+    selectEl.value = baseStatus;
+    document.getElementById('spare_details_input').value = currentSpareDetails || '';
+    document.getElementById('spare_eta_input').value = currentSpareEta || '';
+    
+    toggleSpareInputFields();
+    
+    let existingViewModal = bootstrap.Modal.getInstance(document.getElementById('spareDetailViewModal'));
+    if (existingViewModal) existingViewModal.hide();
+    new bootstrap.Modal(document.getElementById('sparePartModal')).show();
+}
+function toggleSpareInputFields() {
+    let statusVal = document.getElementById('spare_status_select').value;
+    let detailsArea = document.getElementById('div_spare_details_area');
+    let etaArea = document.getElementById('div_spare_eta');
+    
+    if (statusVal === 'รอสั่งอะไหล่') {
+        detailsArea.style.display = 'block';
+        etaArea.style.display = 'none';
+    } else if (statusVal === 'สั่งอะไหล่แล้ว') {
+        detailsArea.style.display = 'block';
+        etaArea.style.display = 'block';
+    } else if (statusVal === 'อะไหล่มาถึงแล้ว') {
+        detailsArea.style.display = 'block';
+        etaArea.style.display = 'none';
+    }
+}
+function saveSparePartData() {
+    const jobId = document.getElementById('spare_job_id').value;
+    const statusType = document.getElementById('spare_status_select').value;
+    const spareDetails = document.getElementById('spare_details_input').value.trim();
+    const spareEta = document.getElementById('spare_eta_input').value;
+    let finalStatus = statusType;
+    if (statusType === 'สั่งอะไหล่แล้ว' && spareEta) {
+        const thaiEtaFormatted = formatThaiDate(spareEta);
+        finalStatus = `สั่งอะไหล่แล้ว (รับ ${thaiEtaFormatted})`;
+    }
+    fetch(`/api/jobs/${jobId}/custom_status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            custom_status: finalStatus,
+            spare_details: spareDetails,
+            spare_eta: spareEta
+        })
+    })
+    .then(res => {
+        if (!res.ok) {
+            return fetch(`/api/jobs/${jobId}/payment`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ payment_status: finalStatus })
+            });
+        }
+        return res.json();
+    })
+    .then(() => {
+        let modalEl = document.getElementById('sparePartModal');
+        let modalInstance = bootstrap.Modal.getInstance(modalEl);
+        if (modalInstance) modalInstance.hide();
+        loadJobs();
+        if (socket) socket.emit('data_updated');
+    })
+    .catch(err => {
+        console.error("Error saving spare part data:", err);
+        let modalEl = document.getElementById('sparePartModal');
+        let modalInstance = bootstrap.Modal.getInstance(modalEl);
+        if (modalInstance) modalInstance.hide();
+        loadJobs();
+    });
+}
+function viewSparePartDetails(jobId, carModel, plate, status, details, eta) {
+    const body = document.getElementById('spareDetailContentBody');
+    let thaiEtaDisplay = eta ? formatThaiDate(eta) : '';
+    let etaHtml = thaiEtaDisplay ? `<p class="mb-1"><strong>วันที่คาดว่าจะได้รับอะไหล่:</strong> <span class="text-danger fw-bold">${thaiEtaDisplay}</span></p>` : '';
+    
+    body.innerHTML = `
+        <div class="p-2 bg-light rounded border mb-2">
+            <h6 class="fw-bold text-dark mb-1">🚗 ${carModel || '-'}</h6>
+            <h5 class="fw-bold text-primary mb-0">ทะเบียน: ${plate || '-'}</h5>
+        </div>
+        <p class="mb-1"><strong>สถานะอะไหล่:</strong> <span class="badge text-white px-2 py-1" style="background-color: #8b5cf6;">${status}</span></p>
+        ${etaHtml}
+        <div class="mt-2 p-2 bg-white rounded border">
+            <strong>รายละเอียด/การสั่งซื้ออะไหล่:</strong>
+            <p class="mb-0 text-secondary mt-1 fw-bold" style="white-space: pre-line;">${details || 'ไม่มีรายละเอียดระบุไว้'}</p>
+        </div>
+    `;
+    
+    const updateBtn = document.getElementById('btnUpdateStatusFromView');
+    if (status.includes('อะไหล่มาถึงแล้ว')) {
+        updateBtn.style.display = 'none';
+    } else {
+        updateBtn.style.display = 'inline-block';
+        updateBtn.onclick = function() {
+            openSparePartModal(jobId, carModel, plate, status, details, eta);
+        };
+    }
+    
+    new bootstrap.Modal(document.getElementById('spareDetailViewModal')).show();
+}
+// ----------------------------------------------------
+// ฟังก์ชันตารางและรายการเดิม
+// ----------------------------------------------------
+function renderWholesaleTable(jobs) {
+    const tbody = document.getElementById('tbody-wholesale');
+    tbody.innerHTML = '';
+    
+    if (!jobs || jobs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-muted py-2 fw-bold" style="font-size:0.7rem;">ไม่มีรายการค้าส่งประจำวัน</td></tr>`;
+        document.getElementById('total-wholesale').innerText = `รวม: 0 รายการ`;
+        return;
+    }
+    
+    document.getElementById('total-wholesale').innerText = `รวม: ${jobs.length} รายการ`;
+    
+    jobs.forEach(job => {
+        let currentStatus = job.status || 'รอ';
+        let badgeColor = 'bg-secondary';
+        
+        if (currentStatus === 'รอ') badgeColor = 'bg-secondary';
+        else if (currentStatus.includes('รับเรื่องแล้ว')) badgeColor = 'bg-info text-dark';
+        else if (currentStatus.includes('กำลังจัดอะไหล่')) badgeColor = 'bg-warning text-dark';
+        else if (currentStatus.includes('จัดเสร็จแล้ว')) badgeColor = 'bg-success';
+        else if (currentStatus.includes('ปิดงาน')) badgeColor = 'bg-dark text-white';
+        
+        let isClosedByFinance = currentStatus.includes('ปิดงาน');
+        
+        let createdTimestamp = Date.now();
+        if (job.created_date && job.created_time) {
+            let parsedTime = new Date(`${job.created_date}T${job.created_time}`);
+            if (!isNaN(parsedTime.getTime())) {
+                createdTimestamp = parsedTime.getTime();
+            }
+        }
+        
+        const tr = document.createElement('tr');
+        tr.setAttribute('data-id', job.id);
+        tr.setAttribute('data-created-timestamp', createdTimestamp);
+        tr.setAttribute('data-status', currentStatus);
+        tr.innerHTML = `
+            <td class="fw-bold text-secondary">${job.created_time || '-'}</td>
+            <td class="fw-bold">${job.receiver}</td>
+            <td class="fw-bold text-dark">${job.customer_name}</td>
+            <td class="text-start clickable-order" onclick="openEditWholesaleModal(${job.id}, '${encodeURIComponent(job.customer_name)}', '${encodeURIComponent(job.order_details)}')">
+                ${job.order_details}
+                <div class="mt-1">
+                    <span class="text-secondary" style="font-size:0.6rem;" onclick="event.stopPropagation(); openEditLogsModal(${job.id})">📜 ดูประวัติแก้ไข</span>
+                </div>
+            </td>
+            <td>
+                <span class="wholesale-timer fw-bold text-primary" style="font-size: 0.75rem;">0 นาที</span>
+            </td>
+            <td>
+                <span class="badge ${badgeColor} shadow-sm wholesale-status-badge" style="font-size:0.7rem; ${isClosedByFinance ? '' : 'cursor:pointer;'}" ${isClosedByFinance ? '' : `onclick="openStatusWholesaleModal(${job.id}, '${currentStatus}')"`} title="${isClosedByFinance ? 'สถานะปิดงานโดยการเงิน' : 'คลิกเพื่อเปลี่ยนสถานะ'}">${currentStatus}</span>
+                <div class="mt-1">
+                    <button class="btn btn-outline-primary btn-sm py-0 px-1" style="font-size:0.6rem;" onclick="openTrackingModal(${job.id})">🚚 Tracking ประวัติ</button>
+                </div>
+            </td>
+            <td>
+                <div class="d-flex justify-content-center gap-1">
+                    <button class="btn btn-outline-danger btn-sm px-1 py-0 fw-bold" style="font-size:0.65rem;" onclick="openDeleteWholesaleModal(${job.id})">🗑️</button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+    
+    updateWholesaleTimers();
+}
+function updateWholesaleTimers() {
+    const rows = document.querySelectorAll('#tbody-wholesale tr');
+    const now = Date.now();
+    rows.forEach(row => {
+        const timerSpan = row.querySelector('.wholesale-timer');
+        const statusBadge = row.querySelector('.wholesale-status-badge');
+        if (!timerSpan || !statusBadge) return;
+        
+        const currentStatus = statusBadge.textContent.trim();
+        const createdTimestamp = parseInt(row.getAttribute('data-created-timestamp')) || now;
+        const isClosed = currentStatus.includes('ปิดงาน');
+        
+        // 📌 ถ้าสถานะถูกปิดแล้วจากการเงิน ให้ลบเวลาออก (แสดงเป็น - หรือค่าว่าง) ตามที่ต้องการ
+        if (isClosed) {
+            row.classList.remove('blink-alert');
+            timerSpan.innerHTML = `<span class="text-secondary">-</span>`;
+            return;
+        }
+        
+        const elapsedSeconds = Math.max(0, Math.floor((now - createdTimestamp) / 1000));
+        const totalMins = Math.floor(elapsedSeconds / 60);
+        const hours = Math.floor(totalMins / 60);
+        const mins = totalMins % 60;
+        
+        let timeFormatted = '';
+        
+        // 📌 เงื่อนไข: ถ้าเกิน 24 ชั่วโมง (24 ชม. ขึ้นไป) นับเป็น วัน และ ชั่วโมง (ตัดนาทีออก)
+        if (hours >= 24) {
+            const days = Math.floor(hours / 24);
+            const remainingHours = hours % 24;
+            timeFormatted = `${days} วัน ${remainingHours} ชม.`;
+        } else if (hours > 0) {
+            // ถ้าไม่ถึง 24 ชม. แต่เกิน 1 ชม. แสดง ชั่วโมง และ นาที
+            timeFormatted = `${hours} ชม. ${mins} นาที`;
+        } else {
+            // ถ้าไม่ถึง 1 ชม. แสดง นาที
+            timeFormatted = `${mins} นาที`;
+        }
+        
+        if (currentStatus === 'รอ') {
+            timerSpan.textContent = timeFormatted;
+            if (elapsedSeconds >= 600) {
+                row.classList.add('blink-alert');
+                timerSpan.innerHTML = `<span class="text-danger fw-bold">⚠️ ${timeFormatted}</span>`;
+            } else {
+                row.classList.remove('blink-alert');
+            }
+        } else {
+            row.classList.remove('blink-alert');
+            timerSpan.textContent = timeFormatted;
+        }
+    });
+}
+setInterval(updateWholesaleTimers, 1000);
+function openEditWholesaleModal(id, custName, orderDetails) {
+    document.getElementById('edit_wholesale_id').value = id;
+    document.getElementById('edit_customer_name').value = decodeURIComponent(custName);
+    document.getElementById('edit_order_details').value = decodeURIComponent(orderDetails);
+    document.querySelectorAll('input[name="edit_author"]').forEach(el => el.checked = false);
+    new bootstrap.Modal(document.getElementById('editWholesaleModal')).show();
+}
+function confirmEditWholesale() {
+    const id = document.getElementById('edit_wholesale_id').value;
+    const order_details = document.getElementById('edit_order_details').value;
+    const authorEl = document.querySelector('input[name="edit_author"]:checked');
+    if (!authorEl) {
+        alert('กรุณาเลือกชื่อผู้บันทึกการแก้ไข');
+        return;
+    }
+    const editor = authorEl.value;
+    fetch(`/api/wholesale/jobs/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_details, editor })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('editWholesaleModal')).hide();
+            loadWholesaleJobs();
+        } else {
+            alert(data.error || 'เกิดข้อผิดพลาดในการแก้ไข');
+        }
+    });
+}
+function openEditLogsModal(id) {
+    fetch(`/api/wholesale/jobs/${id}/edit-logs`)
+        .then(res => res.json())
+        .then(data => {
+            const tbody = document.getElementById('tbody-edit-logs');
+            tbody.innerHTML = '';
+            let logs = data.logs || [];
+            if (logs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="text-muted py-2 fw-bold" style="font-size:0.7rem;">ไม่มีประวัติการแก้ไข</td></tr>`;
+            } else {
+                logs.forEach(log => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="text-secondary" style="font-size:0.7rem;">${log.edited_at}</td>
+                            <td class="fw-bold text-success" style="font-size:0.7rem;">${log.editor}</td>
+                            <td class="text-start" style="font-size:0.7rem;">${log.details}</td>
+                        </tr>
+                    `;
+                });
+            }
+            new bootstrap.Modal(document.getElementById('editLogsModal')).show();
+        });
+}
+function openTrackingModal(id) {
+    fetch(`/api/wholesale/jobs/${id}/tracking`)
+        .then(res => res.json())
+        .then(data => {
+            const area = document.getElementById('trackingTimelineArea');
+            area.innerHTML = '';
+            let logs = data.tracking || [];
+            if (logs.length === 0) {
+                area.innerHTML = '<div class="text-muted small fw-bold py-2">ยังไม่มีประวัติการอัปเดตสถานะ</div>';
+            } else {
+                logs.forEach(item => {
+                    area.innerHTML += `
+                        <div class="tracking-step">
+                            <div class="tracking-time">${item.timestamp}</div>
+                            <div class="tracking-status">${item.status}</div>
+                            <div class="tracking-person">ผู้ดำเนินการ: ${item.person || '-'}</div>
+                        </div>
+                    `;
+                });
+            }
+            new bootstrap.Modal(document.getElementById('trackingModal')).show();
+        });
+}
+function openStatusWholesaleModal(id, currentStatus) {
+    if (currentStatus.includes('ปิดงาน')) {
+        alert('สถานะปิดงานแล้ว ไม่สามารถเปลี่ยนแปลงได้');
+        return;
+    }
+    document.getElementById('status_wholesale_id').value = id;
+    let selectEl = document.getElementById('select_status_type');
+    let baseStatus = currentStatus.split('(')[0].trim();
+    selectEl.value = ['รับเรื่องแล้ว', 'กำลังจัดอะไหล่', 'จัดเสร็จแล้ว พร้อมส่งหน้าร้าน', 'จัดเสร็จแล้ว พร้อมส่งขนส่ง'].includes(baseStatus) ? baseStatus : 'รับเรื่องแล้ว';
+    new bootstrap.Modal(document.getElementById('statusWholesaleModal')).show();
+}
+function toggleStatusInput() {
+    let statusType = document.getElementById('select_status_type').value;
+    let divCarrier = document.getElementById('div_carrier_name');
+    divCarrier.style.display = (statusType === 'จัดเสร็จแล้ว พร้อมส่งขนส่ง') ? 'block' : 'none';
+}
+function confirmUpdateStatus() {
+    const id = document.getElementById('status_wholesale_id').value;
+    const statusType = document.getElementById('select_status_type').value;
+    const personEl = document.querySelector('input[name="status_person_radio"]:checked');
+    const carrier = document.getElementById('input_carrier_name').value.trim();
+    
+    if (!personEl) {
+        alert('กรุณาเลือกชื่อผู้ดำเนินการ');
+        return;
+    }
+    let person = personEl.value;
+    let finalStatus = (statusType === 'จัดเสร็จแล้ว พร้อมส่งขนส่ง') ? `${statusType} (${person}, ขนส่ง:${carrier})` : `${statusType} (${person})`;
+    
+    fetch(`/api/wholesale/jobs/${id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: finalStatus, person: person, carrier: carrier })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('statusWholesaleModal')).hide();
+            loadWholesaleJobs();
+        }
+    });
+}
+function exportWholesaleToExcel() {
+    const selectedDate = document.getElementById('filter_date').value;
+    if (!globalWholesaleJobs || globalWholesaleJobs.length === 0) {
+        alert("ไม่มีข้อมูลค้าส่งสำหรับวันที่เลือก");
+        return;
+    }
+    let excelData = globalWholesaleJobs.map((item, idx) => ({
+        "ลำดับ": idx + 1,
+        "เวลาบันทึก": item.created_time || '',
+        "ผู้รับเรื่อง": item.receiver,
+        "ชื่อลูกค้า": item.customer_name,
+        "รายการที่สั่ง": item.order_details,
+        "สถานะ": item.status || 'รอ'
+    }));
+    let ws = XLSX.utils.json_to_sheet(excelData);
+    let wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "ลูกค้าค้าส่ง");
+    XLSX.writeFile(wb, `Wholesale_Report_${selectedDate}.xlsx`);
+}
+function openDeleteWholesaleModal(id) {
+    document.getElementById('delete_wholesale_id').value = id;
+    document.getElementById('delete_password').value = '';
+    document.getElementById('delete_reason').value = '';
+    new bootstrap.Modal(document.getElementById('deleteWholesaleModal')).show();
+}
+function confirmDeleteWholesale() {
+    const id = document.getElementById('delete_wholesale_id').value;
+    const password = document.getElementById('delete_password').value;
+    const reason = document.getElementById('delete_reason').value;
+    if (!password || !reason) {
+        alert('กรุณากรอกรหัสผ่านและเหตุผลในการลบ');
+        return;
+    }
+    fetch(`/api/wholesale/jobs/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password, reason })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('deleteWholesaleModal')).hide();
+            loadWholesaleJobs();
+            loadDeleteLogs();
+        }
+    });
+}
+function openDeleteLogsModal() {
+    loadDeleteLogs();
+    new bootstrap.Modal(document.getElementById('deleteLogsModal')).show();
+}
+function renderDeleteLogsTable(logs) {
+    const tbody = document.getElementById('tbody-delete-logs');
+    tbody.innerHTML = '';
+    if (!logs || logs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-muted py-2 fw-bold" style="font-size:0.7rem;">ไม่มีประวัติการลบ</td></tr>`;
+        return;
+    }
+    logs.forEach(log => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="fw-bold text-secondary" style="font-size:0.7rem;">${log.deleted_at}</td>
+            <td class="fw-bold text-dark">${log.customer_name}</td>
+            <td class="text-start" style="font-size:0.7rem;">${log.order_details}</td>
+            <td class="text-start text-danger fw-bold" style="font-size:0.7rem;">${log.reason}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+function renderPage() {
+    document.getElementById('tbody-team-1').innerHTML = '';
+    document.getElementById('tbody-team-2').innerHTML = '';
+    document.getElementById('tbody-team-3').innerHTML = '';
+    document.getElementById('tbody-team-subaru').innerHTML = '';
+    
+    const filterDateVal = document.getElementById('filter_date').value;
+    let team1Jobs = [], team2Jobs = [], team3Jobs = [], teamSubaruJobs = [];
+    let totalT1Daily = 0, totalT2Daily = 0, totalT3Daily = 0, totalSubaruDaily = 0;
+    let countT1 = 0, countT2 = 0, countT3 = 0, countSubaru = 0;
+    
+    globalJobsData.forEach(job => {
+        const cleanTeam = job.team !== undefined && job.team !== null ? String(job.team).trim() : '0';
+        const hasTeam = cleanTeam !== '' && cleanTeam !== '0' && cleanTeam !== 'null' && cleanTeam !== 'undefined';
+        const isCancelled = job.is_cancelled === 1;
+        const payStatus = job.custom_status || job.payment_status || '';
+        const isPaid = (payStatus === 'ชำระเงินแล้ว');
+        
+        let jobDeliveredDateStr = "";
+        if (job.delivered_at && job.delivered_at !== 'null') {
+            const offset = 7 * 60 * 60 * 1000;
+            jobDeliveredDateStr = new Date(new Date(job.delivered_at).getTime() + offset).toISOString().split('T')[0];
+        }
+        const isPendingFromPrevious = !isCancelled && job.is_delivered !== 1 && job.created_date < filterDateVal;
+        const isRelevantToFilterDate = (job.created_date === filterDateVal) || (job.promised_date === filterDateVal) || (jobDeliveredDateStr === filterDateVal) || isPendingFromPrevious;
+        
+        if (!isRelevantToFilterDate) return;
+        
+        if (!isCancelled) {
+            if (cleanTeam === '1') totalT1Daily++;
+            else if (cleanTeam === '2') totalT2Daily++;
+            else if (cleanTeam === '3') totalT3Daily++;
+            else if (cleanTeam === 'Subaru') totalSubaruDaily++;
+        }
+        
+        if (!isCancelled && !(job.is_delivered === 1 && isPaid) && !(job.is_delivered === 1 && !isPaid)) {
+            const isOngoingForToday = (job.created_date === filterDateVal) || (job.promised_date === filterDateVal) || (!job.is_delivered) || isPendingFromPrevious;
+            if (isOngoingForToday && hasTeam) {
+                if (cleanTeam === '1') { team1Jobs.push(job); countT1++; }
+                else if (cleanTeam === '2') { team2Jobs.push(job); countT2++; }
+                else if (cleanTeam === '3') { team3Jobs.push(job); countT3++; }
+                else if (cleanTeam === 'Subaru') { teamSubaruJobs.push(job); countSubaru++; }
+                else { team1Jobs.push(job); countT1++; }
+            }
+        }
+    });
+    
+    document.getElementById('total-team-1').innerText = `รวม: ${totalT1Daily} คัน`;
+    document.getElementById('total-team-2').innerText = `รวม: ${totalT2Daily} คัน`;
+    document.getElementById('total-team-3').innerText = `รวม: ${totalT3Daily} คัน`;
+    document.getElementById('badge-team-1').innerText = `กำลังทำ: ${countT1} คัน`;
+    document.getElementById('badge-team-2').innerText = `กำลังทำ: ${countT2} คัน`;
+    document.getElementById('badge-team-3').innerText = `กำลังทำ: ${countT3} คัน`;
+    
+    team1Jobs.forEach(job => addTeamRow(job, 'tbody-team-1'));
+    if(team1Jobs.length === 0) showEmptyRow('tbody-team-1', 5);
+    team2Jobs.forEach(job => addTeamRow(job, 'tbody-team-2'));
+    if(team2Jobs.length === 0) showEmptyRow('tbody-team-2', 5);
+    team3Jobs.forEach(job => addTeamRow(job, 'tbody-team-3'));
+    if(team3Jobs.length === 0) showEmptyRow('tbody-team-3', 5);
+    
+    const subaruContainer = document.getElementById('container-team-subaru');
+    if (teamSubaruJobs.length > 0) {
+        subaruContainer.style.display = 'block';
+        document.getElementById('total-team-subaru').innerText = `รวม: ${totalSubaruDaily} คัน`;
+        document.getElementById('badge-team-subaru').innerText = `กำลังทำ: ${countSubaru} คัน`;
+        teamSubaruJobs.forEach(job => addTeamRow(job, 'tbody-team-subaru'));
+    } else {
+        subaruContainer.style.display = 'none';
+    }
+}
+function addTeamRow(job, targetBodyId) {
+    const tmrLocal = new Date();
+    tmrLocal.setDate(tmrLocal.getDate() + 1);
+    const tmrStr = tmrLocal.toLocaleDateString('en-CA');
+    const filterDateVal = document.getElementById('filter_date').value;
+    let displayDateStr = "";
+    if (job.promised_date) {
+        if (job.promised_date === todayStr) displayDateStr = "วันนี้";
+        else if (job.promised_date === tmrStr) displayDateStr = "พรุ่งนี้";
+        else {
+            displayDateStr = formatThaiDate(job.promised_date);
+        }
+    } else { displayDateStr = "วันนี้"; }
+    
+    let timeStr = (!job.promised_time || job.promised_time === "") ? "ไม่ระบุเวลา" : job.promised_time;
+    let timeDisplay = `<span style="font-size:0.7rem;"><span class="fw-bold">${displayDateStr}</span><br>${timeStr}</span>`;
+    
+    let currentCustomStatus = job.custom_status || job.payment_status || 'กำลังซ่อม';
+    if(currentCustomStatus === 'รอชำระ' || currentCustomStatus === 'ชำระเงินแล้ว') currentCustomStatus = 'กำลังซ่อม';
+    
+    let statusBadgeClass = 'status-badge-repairing';
+    if(currentCustomStatus === 'เสนอราคาแล้ว') statusBadgeClass = 'status-badge-quoting';
+    else if(currentCustomStatus === 'รออนุมัติ') statusBadgeClass = 'status-badge-waiting';
+    else if(currentCustomStatus === 'ติดต่อลูกค้าไม่ได้') statusBadgeClass = 'status-badge-contact';
+    else if(currentCustomStatus === 'รอสั่งอะไหล่') statusBadgeClass = 'status-badge-ordering';
+    else if(currentCustomStatus.includes('สั่งอะไหล่แล้ว')) statusBadgeClass = 'status-badge-ordered';
+    else if(currentCustomStatus.includes('อะไหล่มาถึงแล้ว')) statusBadgeClass = 'status-badge-arrived';
+    else if(currentCustomStatus === 'กำลังซ่อม') statusBadgeClass = 'status-badge-repairing';
+    
+    let statusHtml = "";
+    
+    // ตรวจสอบเงื่อนไขสถานะปัจจุบัน
+    let isWaitingForSpare = currentCustomStatus === 'รอสั่งอะไหล่';
+    let isSpareOrdered = currentCustomStatus.includes('สั่งอะไหล่แล้ว');
+    let isSpareArrived = currentCustomStatus.includes('อะไหล่มาถึงแล้ว');
+    
+    // ตรวจสอบว่าเคยมีการกรอกรายละเอียดหรือบันทึกข้อมูลการสั่งอะไหล่ไปแล้วหรือไม่
+    let hasExistingSpareDetails = job.spare_details !== undefined && job.spare_details !== null && job.spare_details.trim() !== '';
+
+    if (isWaitingForSpare) {
+        if (hasExistingSpareDetails) {
+            // ถ้าสถานะเป็น "รอสั่งอะไหล่" แต่เคยถูกบันทึกข้อมูลอะไหล่ไปแล้ว -> ล็อกไม่ให้กดซ้ำตามเงื่อนไข
+            statusHtml = `<button class="btn btn-micro ${statusBadgeClass} fw-bold w-100 py-1 shadow-sm text-truncate border-0" style="font-size:0.58rem; opacity: 0.85; cursor: not-allowed;" disabled title="ข้อมูลการสั่งอะไหล่เคยถูกบันทึกไปแล้ว ไม่สามารถเพิ่มซ้ำได้">${currentCustomStatus} (บันทึกแล้ว)</button>`;
+        } else {
+            // ถ้าสถานะเป็น "รอสั่งอะไหล่" และยังไม่เคยกรอกข้อมูล -> เปิดให้คลิกกรอกข้อมูลได้ตามปกติ
+            let onClickAction = `openSparePartModal(${job.id}, '${job.car_model || ''}', '${job.license_plate}', '${currentCustomStatus}', '${job.spare_details || ''}', '${job.spare_eta || ''}')`;
+            statusHtml = `<button class="btn btn-micro ${statusBadgeClass} fw-bold w-100 py-1 shadow-sm text-truncate border-0" style="font-size:0.58rem;" onclick="${onClickAction}">${currentCustomStatus}</button>`;
+        }
+    
+    } else if (isSpareOrdered || isSpareArrived) {
+        // สั่งอะไหล่แล้ว หรือ อะไหล่มาถึงแล้ว -> ให้กดเปิดดูรายละเอียดได้
+        let viewOnlyAction = `viewSparePartDetails(${job.id}, '${job.car_model || ''}', '${job.license_plate}', '${currentCustomStatus}', '${job.spare_details || ''}', '${job.spare_eta || ''}')`;
+        let titleTooltip = isSpareArrived ? "อะไหล่มาถึงแล้ว (ล็อคไม่ให้แก้ไข)" : "ดูรายละเอียดการสั่งอะไหล่";
+        statusHtml = `<button class="btn btn-micro ${statusBadgeClass} fw-bold w-100 py-1 shadow-sm text-truncate border-0" style="font-size:0.58rem;" onclick="${viewOnlyAction}" title="${titleTooltip}">${currentCustomStatus}</button>`;
+    
+    } else {
+        // สถานะอื่นๆ เช่น รออนุมัติ, ติดต่อลูกค้าไม่ได้, กำลังซ่อม -> บังคับปิด (ไม่ให้กด)
+        statusHtml = `<button class="btn btn-micro ${statusBadgeClass} fw-bold w-100 py-1 shadow-sm text-truncate border-0" style="font-size:0.58rem; opacity: 0.85; cursor: not-allowed;" disabled title="ต้องอยู่ในสถานะรอสั่งอะไหล่เท่านั้นจึงจะจัดการได้">${currentCustomStatus}</button>`;
+    }
+    let waitingStatusText = job.waiting_status || '-';
+    let waitingStyle = "";
+    if (waitingStatusText.includes('ไม่รอรับ')) waitingStyle = "color: #dc3545 !important; font-weight: bold;";
+    else if (job.promised_date && job.promised_date !== filterDateVal) waitingStyle = "color: #d97706 !important; font-weight: bold;";
+    
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+        <td><span class="fw-bold text-dark">${job.car_model}</span><br><span class="text-primary fw-bold" style="font-size:0.75rem;">${job.license_plate}</span></td>
+        <td class="text-start" style="font-size:0.73rem;">${job.service_details}</td>
+        <td>${timeDisplay}</td>
+        <td style="font-size:0.7rem; ${waitingStyle}">${waitingStatusText}</td>
+        <td>${statusHtml}</td>
+    `;
+    document.getElementById(targetBodyId).appendChild(tr);
+}
+function showEmptyRow(tbodyId, cols, text="ไม่มีรถ") {
+    document.getElementById(tbodyId).innerHTML = `<tr><td colspan="${cols}" class="text-muted py-2 fw-bold" style="font-size:0.7rem;">${text}</td></tr>`;
+}
+function filterTablesByLicensePlate() {
+    const keyword = document.getElementById('search_license_plate').value.trim().toLowerCase();
+    ['tbody-wholesale', 'tbody-team-1', 'tbody-team-2', 'tbody-team-3', 'tbody-team-subaru'].forEach(tbodyId => {
+        const tbody = document.getElementById(tbodyId);
+        if (!tbody) return;
+        for (let row of tbody.getElementsByTagName('tr')) {
+            if (row.cells.length <= 1) continue;
+            let foundMatch = Array.from(row.cells).some(cell => cell.innerText.toLowerCase().includes(keyword));
+            row.style.display = (keyword === "" || foundMatch) ? "" : "none";
+        }
+    });
+}
+loadJobs();
+loadWholesaleJobs();
+loadDeleteLogs();
+setInterval(() => { loadJobs(); loadWholesaleJobs(); loadDeleteLogs(); }, 30000);
+</script>
+</body>
+</html>

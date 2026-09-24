@@ -1,0 +1,1955 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>กระดานสถานะศูนย์บริการ - JS1 Autowork</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- SheetJS สำหรับ Export Excel -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- html2canvas สำหรับแปลง Modal เป็นรูปภาพ -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<!-- เพิ่มไลบรารี QRCode.js สำหรับสร้าง QR Code สแกนสถานะรถ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+body { background-color: #e2e8f0; color: #020617; font-family: 'Segoe UI', Thonburi, Tahoma, sans-serif; }
+.header-card-minimal { background: #ffffff; border-radius: 8px; padding: 6px 14px !important; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06); border: 1px solid #cbd5e1; }
+.summary-card-mini { background: #ffffff; border-radius: 8px; padding: 4px 12px; border: 1px solid #cbd5e1; display: flex; align-items: center; gap: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+.summary-title-mini { font-size: 0.72rem; font-weight: 700; color: #475569; }
+.summary-value-mini { font-size: 1.1rem; font-weight: 800; }
+.summary-card-highlight { background: #ffffff; border-radius: 8px; padding: 6px 16px; border: 1px solid #cbd5e1; display: flex; align-items: center; gap: 15px; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06); background-color: #f8fafc; }
+.summary-title-highlight { font-size: 0.82rem; font-weight: 800; color: #334155; }
+.summary-value-highlight { font-size: 1.35rem; font-weight: 900; }
+.table-responsive { border-radius: 10px; box-shadow: 0 4px 15px rgba(15, 23, 42, 0.1); background-color: #ffffff; border: 2px solid #94a3b8; overflow: hidden; }
+.table-custom { background-color: #ffffff; color: #020617; margin-bottom: 0; }
+.table-custom td { border-color: #cbd5e1 !important; color: #0f172a; font-weight: 600; padding: 2px 2px !important; }
+.th-team-1 { background-color: #16a34a !important; color: #ffffff !important; }
+.th-team-2 { background-color: #15803d !important; color: #ffffff !important; }
+.th-team-3 { background-color: #166534 !important; color: #ffffff !important; }
+.th-subaru { background-color: #1e40af !important; color: #ffffff !important; }
+.th-unassigned { background-color: #be123c !important; color: #ffffff !important; }
+.th-pending-payment { background-color: #475569 !important; color: #ffffff !important; }
+.table-custom th { font-weight: 800 !important; letter-spacing: 0.3px; font-size: 0.75rem; padding: 3px 2px !important; }
+.row-delivered { background-color: #a7f3d0 !important; color: #064e3b !important; font-size: 0.75rem !important; border-left: 6px solid #059669; }
+.row-delivered td { background-color: transparent !important; color: #064e3b !important; padding: 2px 2px !important; font-weight: 700 !important; }
+.table-compact td, .table-compact th { padding: 2px 2px !important; font-size: 0.73rem !important; vertical-align: middle; }
+.btn-micro { padding: 2px 4px; font-size: 0.65rem; border-radius: 4px; line-height: 1.2; font-weight: bold; }
+.editable-time { cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
+.editable-service { cursor: pointer; text-decoration: underline; text-decoration-style: dotted; color: #020617; font-weight: 700; }
+.editable-waiting { cursor: pointer; text-decoration: underline; text-decoration-style: dotted; font-weight: 800; }
+.waiting-status-green { color: #16a34a !important; }
+.waiting-status-red { color: #dc2626 !important; }
+.editable-remarks { cursor: pointer; text-decoration: underline; text-decoration-style: dotted; color: #be185d; font-size: 0.62rem; font-weight: 600; }
+.editable-service:hover, .editable-waiting:hover, .editable-remarks:hover { color: #2563eb !important; }
+.alert-urgent-box-yellow { background: #fef9c3; border: 2px solid #ca8a04; border-radius: 10px; padding: 8px 12px; box-shadow: 0 4px 12px rgba(202, 138, 4, 0.15); height: 100%; }
+.alert-urgent-box-red { background: #ffe4e6; border: 2px solid #dc2626; border-radius: 10px; padding: 8px 12px; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15); height: 100%; }
+.urgent-card-square { width: 120px; background: #ffffff; border: 2px solid #ef4444; border-radius: 8px; padding: 4px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+.urgent-card-square-yellow { width: 120px; background: #ffffff; border: 2px solid #ca8a04; border-radius: 8px; padding: 4px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+.time-date { color: #1e293b; font-weight: 700; }
+.time-clock { color: #0369a1; font-weight: 800; }
+@keyframes blinkWarningBgLight {0%, 100% { background-color: #fecdd3; } 50% { background-color: #fef08a; } }
+.row-unassigned-blink { animation: blinkWarningBgLight 1.2s infinite; }
+@keyframes blinkSlowYellow {0%, 100% { opacity: 1; font-weight: bold; } 50% { opacity: 0.4; } }
+@keyframes blinkFastRed {0%, 100% { opacity: 1; font-weight: bold; } 50% { opacity: 0.2; } }
+.blink-slow-yellow { animation: blinkSlowYellow 1.5s infinite; }
+.blink-fast-red { animation: blinkFastRed 0.6s infinite; }
+.text-time-not-set { color: #b45309; font-weight: 900; background: #fef3c7; padding: 1px 4px; border-radius: 4px; border: 1px solid #fde68a; display: inline-block; font-size: 0.62rem; }
+.team-header { padding: 4px 8px; border-radius: 6px 6px 0 0; border-left: 5px solid; font-size: 0.8rem; font-weight: 800; margin-bottom: 0; }
+.team-1-header { border-left-color: #16a34a; background-color: #15803d; color: #ffffff; }
+.team-2-header { border-left-color: #15803d; background-color: #166534; color: #ffffff; }
+.team-3-header { border-left-color: #166534; background-color: #14532d; color: #ffffff; }
+.team-subaru-header { border-left-color: #1e3a8a; background-color: #1e40af; color: #ffffff; margin-top: 8px; }
+.unassigned-header { border-left-color: #f43f5e; background-color: #9f1239; color: #ffffff; margin-top: 8px; }
+.pending-payment-header { border-left-color: #64748b; background-color: #475569; color: #ffffff; margin-top: 8px; }
+.table-hover tbody tr { cursor: pointer; }
+.btn-expand-team { font-size: 0.65rem; padding: 1px 6px; border-radius: 4px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: #fff; }
+.btn-expand-team:hover { background: #ffffff; color: #000; }
+.cs-btn { font-size: 0.72rem; font-weight: 700; border-radius: 20px; padding: 3px 12px; transition: all 0.2s; }
+.cs-btn:hover { transform: translateY(-1px); }
+.a4-container { width: 210mm; height: 297mm; padding: 6mm 12mm; margin: 0 auto; background: #ffffff; box-shadow: 0 0 10px rgba(0,0,0,0.1); font-size: 11px; box-sizing: border-box; }
+.a4-header { border-bottom: 2px solid #0284c7; padding-bottom: 6px; margin-bottom: 6px !important; }
+.a4-title { font-size: 18px; font-weight: 800; color: #0f172a; letter-spacing: 0.5px; }
+.a4-box { border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 6px 8px; background-color: #f8fafc; margin-bottom: 6px !important; }
+.a4-badge { background-color: #0284c7; color: #ffffff; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+.qr-placeholder-box { border: 2px dashed #94a3b8; border-radius: 6px; background-color: #ffffff; width: 80px; height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #64748b; font-size: 9px; }
+/* สไตล์ป้ายสถานะแบบต่างๆ */
+.status-badge-quoting { background-color: #0ea5e9 !important; color: #ffffff !important; } /* เสนอราคาแล้ว - ฟ้าสด */
+.status-badge-waiting { background-color: #f59e0b !important; color: #000000 !important; } /* รออนุมัติ - เหลืองอำพัน */
+.status-badge-contact { background-color: #ef4444 !important; color: #ffffff !important; } /* ติดต่อลูกค้าไม่ได้ - แดง */
+.status-badge-ordering { background-color: #8b5cf6 !important; color: #ffffff !important; } /* รอสั่งอะไหล่ - ม่วง */
+.status-badge-repairing { background-color: #64748b !important; color: #ffffff !important; } /* กำลังซ่อม - เทาเข้ม */
+/* เพิ่มเติมสีสถานะสำหรับห้องอะไหล่ */
+.status-badge-ordered { background-color: #3b82f6 !important; color: #ffffff !important; } /* สั่งอะไหล่แล้ว - สีฟ้า */
+.status-badge-arrived { background-color: #10b981 !important; color: #ffffff !important; } /* อะไหล่มาถึงแล้ว - สีเขียวมรกต */
+</style>
+</head>
+<body>
+<div class="container-fluid py-2">
+<!-- Header Bar -->
+<div class="row align-items-center mb-2 header-card-minimal mx-0">
+<div class="col-lg-5 text-center text-lg-start d-flex align-items-center gap-2 flex-wrap">
+<div class="d-inline-flex align-items-center bg-light px-2 py-1 rounded border border-secondary-subtle">
+<label class="me-2 text-primary fw-bold small" style="font-size:0.75rem;">วันที่ประวัติ:</label>
+<input type="date" id="filter_date" class="form-control form-control-sm bg-white text-dark border-0 p-0 fw-bold" style="font-size:0.78em; width:125px;" onchange="loadJobs(); loadWholesaleJobs(); loadReports();">
+</div>
+<button class="btn btn-outline-info btn-sm fw-bold px-2 py-1 shadow-sm text-dark" style="font-size: 0.75rem;" onclick="openDeleteHistoryModal()">📋 ประวัติลบและแก้ไข</button>
+</div>
+<div class="col-lg-3 text-center">
+<h4 class="text-dark mb-0 fw-bold" style="color: #020617; font-weight:800; font-size: 1.1rem;">สถานะการให้บริการ JS1 Autowork</h4>
+</div>
+<div class="col-lg-4 text-center text-lg-end">
+<span id="liveClock" class="badge bg-primary text-white px-2 py-1 rounded shadow-sm fw-bold" style="font-size: 0.75rem;">กำลังโหลดเวลา...</span>
+</div>
+</div>
+<!-- ช่องค้นหาทะเบียน และ แถบปุ่มผู้รับรถ CS พร้อมปุ่มดาวน์โหลดภาพรวมทุกคน -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-2 mx-0 gap-2">
+<div class="input-group input-group-sm shadow-sm" style="max-width: 260px;">
+<span class="input-group-text bg-white text-success border-end-0 fw-bold px-2" style="font-size: 0.72rem;">🔍</span>
+<input type="text" id="search_license_plate" class="form-control form-control-sm border-start-0 text-success fw-bold ps-0" placeholder="ค้นหาเลขทะเบียนรถ..." oninput="filterTablesByLicensePlate()" style="font-size: 0.75rem;">
+<button class="btn btn-outline-secondary btn-sm px-2" type="button" style="font-size: 0.7rem;" onclick="clearSearch()">✕</button>
+</div>
+<div class="d-flex align-items-center gap-1 flex-wrap" id="cs-button-group">
+<span class="fw-bold text-secondary me-1" style="font-size: 0.75rem;">👤 ผู้รับรถ (CS):</span>
+<div id="cs-buttons-list" class="d-flex gap-1 flex-wrap">
+    <button class="btn btn-outline-dark btn-sm cs-btn" onclick="openCSReportModal('CS แอน')">CS แอน</button>
+    <button class="btn btn-outline-dark btn-sm cs-btn" onclick="openCSReportModal('CS จ๋อม')">CS จ๋อม</button>
+    <button class="btn btn-outline-dark btn-sm cs-btn" onclick="openCSReportModal('CS แตง')">CS แตง</button>
+    <button class="btn btn-outline-dark btn-sm cs-btn" onclick="openCSReportModal('CS ตั๊ก')">CS ตั๊ก</button>
+    <button class="btn btn-outline-dark btn-sm cs-btn" onclick="openCSReportModal('CS สา')">CS สา</button>
+    <button class="btn btn-outline-dark btn-sm cs-btn" onclick="openCSReportModal('CS พีม')">CS พีม</button>
+</div>
+</div>
+<div class="d-flex align-items-center gap-1 flex-wrap ms-auto">
+    <button class="btn btn-outline-success btn-sm fw-bold px-2 py-1 shadow-sm" style="font-size: 0.75rem;" onclick="exportAllJobsToExcel()">📊 โหลด Excel ภาพรวม</button>
+    <button class="btn btn-outline-primary btn-sm fw-bold px-2 py-1 shadow-sm" style="font-size: 0.75rem;" onclick="openAllJobsReportModal()">📋 รายงานภาพรวมทั้งหมด</button>
+</div>
+</div>
+<!-- การ์ดสรุปผล -->
+<div class="d-flex flex-wrap gap-2 mb-2 justify-content-start align-items-center">
+<div class="summary-card-highlight border-start border-4 border-secondary">
+<span class="summary-title-highlight">ทั้งหมด (ตามวันที่เลือก)</span>
+<span class="summary-value-highlight text-secondary" id="summary-total-count">0</span>
+</div>
+<div class="summary-card-mini border-start border-3 border-info">
+<span class="summary-title-mini">รายการที่กำลังทำ</span>
+<span class="summary-value-mini text-info" style="color: #0284c7 !important;" id="summary-pending-count">0</span>
+</div>
+<div class="summary-card-mini border-start border-3 border-danger">
+<span class="summary-title-mini">ยังไม่เลือกทีม</span>
+<span class="summary-value-mini text-danger" id="summary-unassigned-count">0</span>
+</div>
+<div class="summary-card-mini border-start border-3 border-success">
+<span class="summary-title-mini">ปิดงานแล้ว</span>
+<span class="summary-value-mini text-success" id="summary-closed-count">0</span>
+</div>
+</div>
+<!-- กรอบแจ้งเตือน -->
+<div class="row gx-2 mb-2" id="urgent-container" style="display: none;">
+<div class="col-lg-6 mb-2" id="wrapper-overdue" style="display: none;">
+<div class="alert-urgent-box-red">
+<h6 class="fw-bold mb-2 blink-fast-red text-danger" style="font-size: 0.8rem;">🚨 ถึงกำหนดเวลาส่งรถแล้ว</h6>
+<div class="d-flex flex-wrap gap-2" id="urgent-cards-overdue"></div>
+</div>
+</div>
+<div class="col-lg-6 mb-2" id="wrapper-upcoming" style="display: none;">
+<div class="alert-urgent-box-yellow">
+<h6 class="fw-bold mb-2 blink-slow-yellow text-dark" style="font-size: 0.8rem;">⚠️ ใกล้ถึงกำหนดเวลาส่งรถแล้ว</h6>
+<div class="d-flex flex-wrap gap-2" id="urgent-cards-upcoming"></div>
+</div>
+</div>
+</div>
+<!-- ตารางทีม 1, 2, 3 (กำลังทำ) พร้อมป้ายรถค้างสีแดง -->
+<div class="row gx-2 align-items-start">
+<div class="col-lg-4 mb-2">
+<h6 class="team-header team-1-header d-flex justify-content-between align-items-center">
+<div>
+<span>ทีม 1 ช่างญา (<span id="total-team-1">รวม: 0 คัน</span>)</span>
+<button class="btn btn-expand-team ms-1" onclick="openTeamModal('1')">🔍 ขยาย</button>
+</div>
+<div class="d-flex align-items-center gap-1">
+<span class="badge bg-danger text-white px-2 py-1 shadow-sm fw-bold" id="badge-carried-1" style="font-size: 0.65rem; display: none;">ค้าง: 0 คัน</span>
+<span class="badge bg-light text-dark px-2 py-1 shadow-sm fw-bold" id="badge-team-1" style="font-size: 0.7rem;">กำลังทำ: 0 คัน</span>
+</div>
+</h6>
+<div class="table-responsive">
+<table class="table table-custom table-bordered table-compact align-middle text-center">
+<thead><tr class="th-team-1"><th style="width:24%">รุ่น/ทะเบียน</th><th style="width:31%">รายการ</th><th style="width:9%">นัดส่ง</th><th style="width:8%">รอ</th><th style="width:11%">ส่งรถ</th><th style="width:12%">สถานะ</th><th style="width:5%">หมายเหตุ</th></tr></thead>
+<tbody id="tbody-team-1"></tbody>
+</table>
+</div>
+</div>
+<div class="col-lg-4 mb-2">
+<h6 class="team-header team-2-header d-flex justify-content-between align-items-center">
+<div>
+<span>ทีม 2 ช่างเรศ (<span id="total-team-2">รวม: 0 คัน</span>)</span>
+<button class="btn btn-expand-team ms-1" onclick="openTeamModal('2')">🔍 ขยาย</button>
+</div>
+<div class="d-flex align-items-center gap-1">
+<span class="badge bg-danger text-white px-2 py-1 shadow-sm fw-bold" id="badge-carried-2" style="font-size: 0.65rem; display: none;">ค้าง: 0 คัน</span>
+<span class="badge bg-light text-dark px-2 py-1 shadow-sm fw-bold" id="badge-team-2" style="font-size: 0.7rem;">กำลังทำ: 0 คัน</span>
+</div>
+</h6>
+<div class="table-responsive">
+<table class="table table-custom table-bordered table-compact align-middle text-center">
+<thead><tr class="th-team-2"><th style="width:24%">รุ่น/ทะเบียน</th><th style="width:31%">รายการ</th><th style="width:9%">นัดส่ง</th><th style="width:8%">รอ</th><th style="width:11%">ส่งรถ</th><th style="width:12%">สถานะ</th><th style="width:5%">หมายเหตุ</th></tr></thead>
+<tbody id="tbody-team-2"></tbody>
+</table>
+</div>
+</div>
+<div class="col-lg-4 mb-2">
+<h6 class="team-header team-3-header d-flex justify-content-between align-items-center">
+<div>
+<span>ทีม 3 ช่างเจตต์ (<span id="total-team-3">รวม: 0 คัน</span>)</span>
+<button class="btn btn-expand-team ms-1" onclick="openTeamModal('3')">🔍 ขยาย</button>
+</div>
+<div class="d-flex align-items-center gap-1">
+<span class="badge bg-danger text-white px-2 py-1 shadow-sm fw-bold" id="badge-carried-3" style="font-size: 0.65rem; display: none;">ค้าง: 0 คัน</span>
+<span class="badge bg-light text-dark px-2 py-1 shadow-sm fw-bold" id="badge-team-3" style="font-size: 0.7rem;">กำลังทำ: 0 คัน</span>
+</div>
+</h6>
+<div class="table-responsive">
+<table class="table table-custom table-bordered table-compact align-middle text-center">
+<thead><tr class="th-team-3"><th style="width:24%">รุ่น/ทะเบียน</th><th style="width:31%">รายการ</th><th style="width:9%">นัดส่ง</th><th style="width:8%">รอ</th><th style="width:11%">ส่งรถ</th><th style="width:12%">สถานะ</th><th style="width:5%">หมายเหตุ</th></tr></thead>
+<tbody id="tbody-team-3"></tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- ตารางทีม Subaru -->
+<div id="container-team-subaru" style="display: none;">
+<h6 class="team-header team-subaru-header d-flex justify-content-between align-items-center">
+<div>
+<span>ทีม Subaru (<span id="total-team-subaru">รวม: 0 คัน</span>)</span>
+<button class="btn btn-expand-team ms-1" onclick="openTeamModal('Subaru')">🔍 ขยาย</button>
+</div>
+<div class="d-flex align-items-center gap-1">
+<span class="badge bg-danger text-white px-2 py-1 shadow-sm fw-bold" id="badge-carried-subaru" style="font-size: 0.65rem; display: none;">ค้าง: 0 คัน</span>
+<span class="badge bg-light text-dark px-2 py-1 shadow-sm fw-bold" id="badge-team-subaru" style="font-size: 0.7rem;">กำลังทำ: 0 คัน</span>
+</div>
+</h6>
+<div class="table-responsive mb-2">
+<table class="table table-custom table-bordered table-compact align-middle text-center">
+<thead><tr class="th-subaru"><th style="width:24%">รุ่น/ทะเบียน</th><th style="width:31%">รายการ</th><th style="width:9%">นัดส่ง</th><th style="width:8%">รอ</th><th style="width:11%">ส่งรถ</th><th style="width:12%">สถานะ</th><th style="width:5%">หมายเหตุ</th></tr></thead>
+<tbody id="tbody-team-subaru"></tbody>
+</table>
+</div>
+</div>
+<!-- ตารางรายการที่ยังไม่เลือกทีมช่าง -->
+<h6 class="team-header unassigned-header">⚠️ รายการที่ยังไม่เลือกทีมช่าง (กรุณากดเลือกทีม)</h6>
+<div class="table-responsive mb-2">
+<table class="table table-custom table-bordered table-compact align-middle text-center">
+<thead><tr class="th-unassigned"><th style="width:5%">ทีม</th><th style="width:7%">ผู้รับ</th><th style="width:16%">รุ่น/ทะเบียน</th><th style="width:8%">รับรถ</th><th style="width:26%">รายการ</th><th style="width:8%">นัดส่ง</th><th style="width:9%">รอ</th><th style="width:8%">จัดการทีม</th><th style="width:8%">สถานะ</th><th style="width:5%">หมายเหตุ</th></tr></thead>
+<tbody id="tbody-unassigned"></tbody>
+</table>
+</div>
+<!-- ตารางลูกค้าค้าส่ง -->
+<div id="container-wholesale" style="display: none;">
+    <h6 class="team-header d-flex justify-content-between align-items-center" style="border-left-color: #0284c7; background-color: #0ea5e9; color: #ffffff; margin-top: 8px;">
+        <div>
+            <span>📦 รายการลูกค้าค้าส่งประจำวัน (<span id="total-wholesale">รวม: 0 รายการ</span>)</span>
+        </div>
+    </h6>
+    <div class="table-responsive mb-2">
+        <table class="table table-custom table-bordered table-compact align-middle text-center">
+            <thead>
+                <tr style="background-color: #38bdf8 !important; color: #0f172a !important;">
+                    <th style="width:10%">เวลาที่บันทึก</th>
+                    <th style="width:10%">ผู้รับเรื่อง</th>
+                    <th style="width:20%">ชื่อลูกค้า</th>
+                    <th style="width:35%">รายการที่สั่ง</th>
+                    <th style="width:25%">สถานะ</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-wholesale"></tbody>
+        </table>
+    </div>
+</div>
+<!-- ตารางสีเทา: เฉพาะรายการที่ "รอชำระ" -->
+<h6 class="team-header pending-payment-header">⏳ รายการที่ยังรอชำระเงิน</h6>
+<div class="table-responsive mb-3">
+<table class="table table-custom table-bordered table-compact align-middle text-center">
+<thead>
+<tr class="th-pending-payment">
+<th style="width:7%">ทีม</th>
+<th style="width:7%">ผู้รับ</th>
+<th style="width:20%">รุ่น/ทะเบียน</th>
+<th style="width:34%">รายการ</th>
+<th style="width:11%">นัดส่ง</th>
+<th style="width:11%">สถานะ/การเงิน</th>
+<th style="width:10%">หมายเหตุ</th>
+</tr>
+</thead>
+<tbody id="tbody-pending-payment"></tbody>
+</table>
+</div>
+<div class="text-center my-3">
+<button type="button" class="btn btn-secondary fw-bold px-4 py-2 shadow-sm" style="border-radius: 8px;" onclick="openClosedJobsModal()">
+✅ ดูประวัติรายการที่ปิดงานแล้ว (ชำระแล้ว) ทั้งหมด
+</button>
+</div>
+</div>
+<!-- Modals ต่างๆ -->
+<div class="modal fade text-dark" id="manageJobModal" tabindex="-1">
+<div class="modal-dialog modal-dialog-centered">
+<div class="modal-content shadow-lg border-0" style="border-radius: 12px;">
+<div class="modal-header bg-dark text-white py-2">
+<h6 class="modal-title fw-bold">แก้ไข / ลบรายการ</h6>
+<button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body p-3">
+<input type="hidden" id="manage_target_id">
+<label class="form-label fw-bold small text-dark">1. รหัสผ่าน (ยืนยันสิทธิ์):</label>
+<input type="password" id="manage_password_input" class="form-control form-control-sm text-center fw-bold mb-2" placeholder="ใส่รหัสผ่าน 1 ใน 3 ที่กำหนด" autocomplete="off">
+<label class="form-label fw-bold small text-dark">2. หมายเหตุ (เหตุผลที่ลบ/แก้ไข) <span class="text-danger">*</span>:</label>
+<textarea id="manage_reason_input" class="form-control form-control-sm mb-3" rows="2" placeholder="ระบุเหตุผล เช่น แก้ไขข้อมูลรถ, ลูกค้ายกเลิก..."></textarea>
+<div class="row g-2 mb-2">
+    <div class="col-4">
+        <label class="form-label fw-bold small text-primary">ผู้รับ (CS):</label>
+        <input type="text" id="manage_receiver_input" class="form-control form-control-sm fw-bold text-center">
+    </div>
+    <div class="col-4">
+        <label class="form-label fw-bold small text-primary">รุ่นรถ:</label>
+        <input type="text" id="manage_model_input" class="form-control form-control-sm fw-bold text-center">
+    </div>
+    <div class="col-4">
+        <label class="form-label fw-bold small text-primary">เลขทะเบียน:</label>
+        <input type="text" id="manage_plate_input" class="form-control form-control-sm fw-bold text-center">
+    </div>
+</div>
+<span id="manage_error_msg" class="text-danger small fw-bold text-center d-block mb-2" style="display: none;"></span>
+</div>
+<div class="modal-footer py-2 bg-light d-flex justify-content-between">
+<button type="button" class="btn btn-danger btn-sm px-3 fw-bold shadow-sm" onclick="verifyAndManageJob('delete')">ลบรายการนี้</button>
+<button type="button" class="btn btn-primary btn-sm px-3 fw-bold shadow-sm" onclick="verifyAndManageJob('edit')">บันทึกการแก้ไข</button>
+</div>
+</div>
+</div>
+</div>
+<div class="modal fade text-dark" id="closedJobsModal" tabindex="-1">
+<div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+<div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+<div class="modal-header bg-secondary text-white py-2">
+<h5 class="modal-title fw-bold">✅ รายการที่ปิดงานแล้วและชำระเงินแล้วทั้งหมด (ตามวันที่เลือก)</h5>
+<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body p-3">
+<div class="table-responsive">
+<table class="table table-custom table-bordered table-compact align-middle text-center mb-0">
+<thead>
+<tr class="table-dark">
+<th style="width:8%">ทีมช่าง</th>
+<th style="width:8%">ผู้รับ</th>
+<th style="width:18%">รุ่น/ทะเบียน</th>
+<th style="width:28%">รายการ</th>
+<th style="width:12%">เวลาปิดงาน</th>
+<th style="width:14%">ผู้รับเงิน</th>
+<th style="width:12%">สถานะ/เงิน</th>
+</tr>
+</thead>
+<tbody id="tbody-all-closed-modal"></tbody>
+</table>
+</div>
+</div>
+<div class="modal-footer py-1">
+<button type="button" class="btn btn-secondary btn-sm px-4 fw-bold" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+</div>
+</div>
+</div>
+</div>
+<div class="modal fade text-dark" id="deleteHistoryModal" tabindex="-1">
+<div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+<div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+<div class="modal-header bg-dark text-white py-2">
+<h5 class="modal-title fw-bold">📋 ประวัติการลบและแก้ไขรายการ</h5>
+<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body p-3">
+<div class="d-flex justify-content-between align-items-center mb-2 bg-light p-2 rounded border">
+<span class="fw-bold text-primary" id="deleteHistoryCount">ประวัติทั้งหมด: 0 รายการ</span>
+<span class="text-muted small">บันทึกรายละเอียดล่าสุดเมื่อมีการลบหรือแก้ไข</span>
+</div>
+<div class="table-responsive">
+<table class="table table-custom table-bordered table-compact align-middle text-center mb-0">
+<thead>
+<tr class="table-dark" style="font-size: 0.75rem;">
+<th style="width: 10%">เวลา</th>
+<th style="width: 7%">ประเภท</th>
+<th style="width: 12%">เหตุผล</th>
+<th style="width: 6%">ทีม</th>
+<th style="width: 8%">ผู้รับ (CS)</th>
+<th style="width: 14%">ทะเบียนรถ</th>
+<th style="width: 20%">รายการซ่อม</th>
+<th style="width: 9%">นัดส่ง</th>
+<th style="width: 14%">หมายเหตุเดิม</th>
+</tr>
+</thead>
+<tbody id="tbody-delete-history"></tbody>
+</table>
+</div>
+</div>
+<div class="modal-footer py-1">
+<button type="button" class="btn btn-secondary btn-sm px-4 fw-bold" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+</div>
+</div>
+</div>
+</div>
+<div class="modal fade text-dark" id="customStatusModal" tabindex="-1">
+<div class="modal-dialog modal-dialog-centered">
+<div class="modal-content shadow-lg border-0" style="border-radius: 12px;">
+<div class="modal-header bg-primary text-white py-2">
+<h6 class="modal-title fw-bold">เลือกอัพเดทสถานะ</h6>
+<button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body p-3 text-center">
+<input type="hidden" id="status_job_id">
+<!-- ส่วนแสดงข้อมูลรายละเอียดการสั่งอะไหล่จากห้อง spare_parts เมื่อสถานะเป็นรอสั่งอะไหล่ -->
+<div id="spare_details_container" class="mb-3 p-2 bg-light rounded border text-start" style="display: none; font-size: 0.8rem;">
+<span class="fw-bold text-purple text-dark">📦 ข้อมูลการสั่งอะไหล่ (จากห้องอะไหล่):</span>
+<div id="spare_details_text" class="text-muted mt-1 fw-semibold">-</div>
+</div>
+<div class="d-grid gap-2">
+<button class="btn btn-outline-warning fw-bold shadow-sm text-dark" onclick="saveCustomStatus('รออนุมัติ')">รออนุมัติ</button>
+<button class="btn btn-outline-danger fw-bold shadow-sm" onclick="saveCustomStatus('ติดต่อลูกค้าไม่ได้')">ติดต่อลูกค้าไม่ได้</button>
+<button class="btn btn-outline-primary fw-bold shadow-sm" onclick="saveCustomStatus('รอสั่งอะไหล่')">รอสั่งอะไหล่</button>
+<button class="btn btn-outline-secondary fw-bold shadow-sm mt-2" onclick="saveCustomStatus('กำลังซ่อม')">กำลังซ่อม</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="modal fade text-dark" id="csReportModal" tabindex="-1">
+<div class="modal-dialog modal-xl modal-dialog-centered">
+<div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+<div class="modal-header bg-dark text-white py-2">
+<h5 class="modal-title fw-bold" id="csReportTitle">รายงานรายการรับรถ</h5>
+<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body p-3" id="csReportCaptureArea">
+<div class="d-flex justify-content-between align-items-center mb-2 bg-light p-2 rounded border flex-wrap gap-2">
+<div>
+<span class="fw-bold text-primary fs-6 me-3" id="csReportCount">รายการทั้งหมด: 0 คัน</span>
+<span class="text-muted small" id="csSummaryBreakdown">สรุปรายคน: -</span>
+</div>
+<div class="d-flex gap-2">
+<button type="button" class="btn btn-success btn-sm fw-bold shadow-sm" onclick="exportCSReportToExcel()">📊 ดาวน์โหลด Excel</button>
+<button type="button" class="btn btn-primary btn-sm fw-bold shadow-sm" onclick="exportCSReportToImage()">📷 ดาวน์โหลดรูปภาพ</button>
+</div>
+</div>
+<div class="mb-3 p-2 bg-white border rounded shadow-sm">
+<h6 class="fw-bold text-dark mb-1" style="font-size: 0.8rem;">📌 สรุปยอดแยกตามรายการบริการ (ประเภทงาน)</h6>
+<div id="csServiceSummaryList" class="d-flex flex-wrap gap-2" style="font-size: 0.75rem;"></div>
+</div>
+<div class="table-responsive">
+<table class="table table-custom table-bordered table-compact align-middle text-center mb-0">
+<thead>
+<tr class="table-dark">
+<th style="width:24%">รุ่น/ทะเบียน</th>
+<th style="width:31%">รายการ</th>
+<th style="width:9%">นัดส่ง</th>
+<th style="width:8%">รอ</th>
+<th style="width:11%">ส่งรถ</th>
+<th style="width:9%">สถานะ</th>
+<th style="width:5%">หมายเหตุ</th>
+</tr>
+</thead>
+<tbody id="tbody-cs-report"></tbody>
+</table>
+</div>
+</div>
+<div class="modal-footer py-1">
+<button type="button" class="btn btn-secondary btn-sm px-4 fw-bold" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+</div>
+</div>
+</div>
+</div>
+<div class="modal fade text-dark" id="allJobsReportModal" tabindex="-1">
+<div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+<div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+<div class="modal-header bg-success text-white py-2">
+<h5 class="modal-title fw-bold">📊 รายงานสรุปภาพรวมการให้บริการของทุกคน (ทุกทีม)</h5>
+<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body p-3" id="allJobsCaptureArea">
+<div class="d-flex justify-content-between align-items-center mb-2 bg-light p-2 rounded border flex-wrap gap-2">
+<div>
+<span class="fw-bold text-success fs-6 me-3" id="allJobsTotalCount">จำนวนรถทั้งหมด: 0 คัน</span>
+<span class="text-muted small" id="allJobsSummaryBreakdown">สรุปภาพรวมศูนย์บริการ</span>
+</div>
+<div class="d-flex gap-2">
+<button type="button" class="btn btn-success btn-sm fw-bold shadow-sm" onclick="exportAllJobsToExcel()">📊 ดาวน์โหลด Excel</button>
+<button type="button" class="btn btn-primary btn-sm fw-bold shadow-sm" onclick="exportAllJobsToImage()">📷 ดาวน์โหลดรูปภาพ</button>
+</div>
+</div>
+<div class="mb-3 p-2 bg-white border rounded shadow-sm">
+<h6 class="fw-bold text-dark mb-1" style="font-size: 0.8rem;">📌 สรุปยอดแยกตามรายการบริการ (ภาพรวมศูนย์)</h6>
+<div id="allJobsServiceSummaryList" class="d-flex flex-wrap gap-2" style="font-size: 0.75rem;"></div>
+</div>
+<div class="table-responsive">
+<table class="table table-custom table-bordered table-compact align-middle text-center mb-0">
+<thead>
+<tr class="table-dark">
+<th style="width:7%">ทีม</th>
+<th style="width:7%">ผู้รับ</th>
+<th style="width:18%">รุ่น/ทะเบียน</th>
+<th style="width:28%">รายการ</th>
+<th style="width:9%">นัดส่ง</th>
+<th style="width:8%">รอ</th>
+<th style="width:11%">สถานะส่ง</th>
+<th style="width:12%">สถานะการดำเนินงาน</th>
+</tr>
+</thead>
+<tbody id="tbody-all-jobs-report"></tbody>
+</table>
+</div>
+</div>
+<div class="modal-footer py-1">
+<button type="button" class="btn btn-secondary btn-sm px-4 fw-bold" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+</div>
+</div>
+</div>
+</div>
+<div class="modal fade text-dark" id="expandTeamModal" tabindex="-1">
+<div class="modal-dialog modal-xl modal-dialog-centered">
+<div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+<div class="modal-header py-2 text-white" id="expandTeamHeader">
+<h5 class="modal-title fw-bold" id="expandTeamTitle">ตารางทีม</h5>
+<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body p-2">
+<div class="table-responsive">
+<table class="table table-custom table-bordered align-middle text-center mb-0">
+<thead><tr id="expandTeamThead"><th style="width:24%">รุ่น/ทะเบียน</th><th style="width:30%">รายการ</th><th style="width:10%">นัดส่ง</th><th style="width:8%">รอ</th><th style="width:12%">ส่งรถ</th><th style="width:8%">สถานะ</th><th style="width:4%">หมายเหตุ</th></tr></thead>
+<tbody id="tbody-expand-team"></tbody>
+</table>
+</div>
+</div>
+<div class="modal-footer py-1">
+<button type="button" class="btn btn-secondary btn-sm px-4 fw-bold" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+</div>
+</div>
+</div>
+</div>
+<div class="modal fade text-dark" id="carDeliveryOptionsModal" tabindex="-1">
+<div class="modal-dialog modal-dialog-centered modal-sm">
+<div class="modal-content shadow-lg border-0" style="border-radius: 15px;">
+<div class="modal-header bg-primary text-white py-2" style="border-radius: 15px 15px 0 0;">
+<h6 class="modal-title fw-bold" id="deliveryModalTitle">เลือกสถานะการส่งรถ</h6>
+<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body p-3 text-center">
+<input type="hidden" id="delivery_job_id">
+<input type="hidden" id="current_key_status">
+<input type="hidden" id="current_job_status">
+<p class="text-muted small mb-3">ทะเบียน: <span class="fw-bold text-dark fs-6" id="delivery_license_plate">-</span></p>
+<div class="d-grid gap-2">
+<button type="button" id="btn-modal-key" class="btn btn-outline-primary fw-bold text-start py-2 px-3" onclick="processDelivery('key')">
+1. ส่งกุญแจ <br><small class="fw-normal text-muted" style="font-size:0.7rem;">(ยังไม่ได้ส่ง Job)</small>
+</button>
+<button type="button" id="btn-modal-job" class="btn btn-outline-warning text-dark fw-bold text-start py-2 px-3" onclick="processDelivery('job')">
+2. ส่ง Job <br><small class="fw-normal text-muted" style="font-size:0.7rem;">(ยังไม่ได้ส่งกุญแจ)</small>
+</button>
+<button type="button" id="btn-modal-both" class="btn btn-success fw-bold text-start py-2 px-3" onclick="processDelivery('both')">
+3. ส่งกุญแจ + Job <br><small class="fw-normal text-white-50" style="font-size:0.7rem;">(เสร็จสิ้นกระบวนการส่งมอบ)</small>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="modal fade text-dark" id="editTimeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title">ระบุเวลานัดส่ง (ระบบ 24 ชั่วโมง)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="edit_id">
+                <label class="form-label fw-bold">วันที่นัดส่งใหม่:</label>
+                <input type="date" id="edit_date" class="form-control mb-3" required>
+                <label class="form-label fw-bold">เวลานัดส่งใหม่ (24 ชั่วโมง):</label>
+                <input type="time" id="edit_time" class="form-control mb-1" step="60" required>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary w-100 fw-bold" onclick="saveNewTime()">บันทึกเวลา</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade text-dark" id="editServiceModal" tabindex="-1">
+<div class="modal-dialog">
+<div class="modal-content">
+<div class="modal-header bg-success text-white">
+<h5 class="modal-title">แก้ไขรายการที่ทำ</h5>
+<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body">
+<input type="hidden" id="edit_service_id">
+<label class="form-label fw-bold">พิมพ์เพิ่มเติม หรือแก้ไขรายการที่ทำ:</label>
+<textarea id="edit_service_details" class="form-control mb-3" rows="3" placeholder="ระบุรายละเอียดงานซ่อม..."></textarea>
+<div class="d-flex gap-2 align-items-center mb-3">
+<div class="input-group input-group-sm flex-grow-1">
+<span class="input-group-text bg-success text-white border-success">🔍</span>
+<input type="text" id="modalServiceSearchInput" class="form-control form-control-sm border-success text-dark fw-bold" list="allServicesListModal" placeholder="พิมพ์เพื่อค้นหา..." onchange="handleModalServiceSearch(this)" autocomplete="off">
+<datalist id="allServicesListModal"></datalist>
+</div>
+<button type="button" class="btn btn-success btn-sm fw-bold text-nowrap" data-bs-toggle="modal" data-bs-target="#serviceCategoryModal">
+📋 เลือกจากหมวดหมู่
+</button>
+</div>
+</div>
+<div class="modal-footer">
+<button type="button" class="btn btn-primary w-100 fw-bold" onclick="saveNewService()">บันทึกการแก้ไข</button>
+</div>
+</div>
+</div>
+</div>
+<div class="modal fade text-dark" id="editWaitingModal" tabindex="-1"><div class="modal-dialog modal-sm"><div class="modal-content"><div class="modal-header bg-success text-white"><h5 class="modal-title">เปลี่ยนสถานะการรอ</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="edit_waiting_id"><label>เลือกสถานะการรอใหม่:</label><select id="edit_waiting_value" class="form-select mb-3"><option value="รอรับ">รอรับ</option><option value="ไม่รอรับ">ไม่รอรับ</option></select></div><div class="modal-footer"><button type="button" class="btn btn-primary w-100" onclick="saveNewWaiting()">บันทึกสถานะ</button></div></div></div></div>
+<div class="modal fade text-dark" id="editRemarksModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-secondary text-white"><h5 class="modal-title">แก้ไขหมายเหตุ</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="edit_remarks_id"><label>พิมพ์หมายเหตุเพิ่มเติม:</label><textarea id="edit_remarks_details" class="form-control mb-3" rows="3"></textarea></div><div class="modal-footer"><button type="button" class="btn btn-primary w-100" onclick="saveNewRemarks()">บันทึกหมายเหตุ</button></div></div></div></div>
+<div class="modal fade text-dark" id="confirmCancelModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-warning"><h5 class="modal-title">ยืนยันการปิดงาน (ส่งรถก่อน)</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body text-center py-4"><input type="hidden" id="cancel_job_id"><p class="text-muted mb-2">กรุณาตรวจสอบความถูกต้องของรถคันที่จะปิดงาน</p><div class="p-3 bg-light border rounded mb-3"><h4 class="text-secondary fw-bold mb-1" id="cancel_car_model">-</h4><h3 class="text-warning fw-bold mb-0" id="cancel_license_plate">-</h3></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button><button type="button" class="btn btn-warning px-4 fw-bold text-dark" onclick="executeCancel()">ยืนยันส่งรถก่อน</button></div></div></div></div>
+<div class="modal fade text-dark" id="moveTeamModal" tabindex="-1"><div class="modal-dialog modal-sm"><div class="modal-content"><div class="modal-header bg-info"><h5 class="modal-title">เลือกทีมช่าง</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body text-center"><input type="hidden" id="move_team_id"><input type="hidden" id="move_team_old"><p class="text-muted mb-1">รถทะเบียน</p><h4 class="text-primary fw-bold" id="move_team_plate">-</h4><p class="text-secondary small mb-3" id="move_team_current">-</p><label class="fw-bold mb-2">เลือกทีมที่ต้องการมอบหมายงาน:</label><select id="move_team_value" class="form-select mb-3 text-center fw-bold"></select></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button><button type="button" class="btn btn-info w-100 fw-bold" onclick="executeMoveTeam()">ยืนยันเลือกทีม</button></div></div></div></div>
+<div class="modal fade" id="quickSearchModal" tabindex="-1">
+<div class="modal-dialog modal-dialog-centered modal-sm">
+<div class="modal-content shadow-lg border-0" style="border-radius: 15px;">
+<div class="modal-header bg-success text-white py-2" style="border-radius: 15px 15px 0 0;">
+<h6 class="modal-title fw-bold">ข้อมูลสถานะรถ</h6>
+<button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body p-3 text-start" style="font-size: 0.85rem;">
+<input type="hidden" id="q-job-id">
+<div class="mb-2 text-center bg-light p-2 rounded border">
+<span class="text-muted small">ทะเบียนรถ</span>
+<h4 class="text-success fw-bold mb-0" id="q-plate">-</h4>
+</div>
+<div class="mb-1"><strong>ยี่ห้อ/รุ่น:</strong> <span id="q-model" class="text-dark">-</span></div>
+<div class="mb-1"><strong>ทีมช่าง:</strong> <span id="q-team" class="text-primary fw-bold">-</span></div>
+<div class="mb-1"><strong>ผู้รับรถ:</strong> <span id="q-receiver">-</span></div>
+<div class="mb-1"><strong>รายการ:</strong> <span id="q-service" class="text-secondary">-</span></div>
+<div class="mb-1" id="q-customer-type-container" style="display: none;"><strong>สถานะลูกค้า:</strong> <span id="q-customer-type" class="fw-bold text-info">-</span></div>
+<div class="mb-1"><strong>เวลาที่รับรถ:</strong> <span id="q-time-in" class="fw-bold text-info">-</span></div>
+<div class="mb-1"><strong>นัดส่ง:</strong> <span id="q-time" class="fw-bold text-danger">-</span></div>
+<div class="mb-1"><strong>สถานะงาน:</strong> <span id="q-payment" class="fw-bold text-success">-</span></div>
+<div class="mt-2 pt-2 border-top text-center mb-2">
+<span class="badge bg-warning text-dark px-2 py-1" id="q-status">สถานะ: กำลังซ่อม</span>
+</div>
+<div class="d-grid gap-1 mt-3 pt-2 border-top">
+    <button type="button" class="btn btn-sm btn-primary fw-bold py-1" onclick="quickPopupAction('delivery')">🚗 ส่งรถ</button>
+    <button type="button" class="btn btn-sm btn-warning fw-bold text-dark py-1" onclick="quickPopupAction('editTime')">🕒 เลื่อนเวลานัดส่ง</button>
+    <button type="button" class="btn btn-sm btn-success fw-bold py-1" onclick="quickPopupAction('printReceipt')">🖨️ พิมพ์ใบรับรถ</button>
+    <button type="button" class="btn btn-sm btn-info fw-bold text-dark py-1" onclick="quickPopupAction('generateQR')">📱 สร้าง QR Code เช็กสถานะ</button>
+    <button type="button" class="btn btn-sm btn-outline-danger fw-bold py-1" onclick="quickPopupAction('manage')">⚙️ แก้ไข / ลบรายการ</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="modal fade" id="serviceCategoryModal" tabindex="-1">
+<div class="modal-dialog modal-lg modal-dialog-scrollable">
+<div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+<div class="modal-header bg-success text-white py-2" style="border-radius: 12px 12px 0 0;">
+<h5 class="modal-title fs-6 fw-bold">เลือกรายการงานซ่อม</h5>
+<button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body p-0">
+<div class="accordion accordion-flush" id="accordionServices"></div>
+</div>
+<div class="modal-footer py-1 bg-light">
+<button type="button" class="btn btn-secondary btn-sm fw-bold px-4" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Modal พิมพ์ใบรับรถ A4 -->
+<div class="modal fade" id="receiptPrintModal" tabindex="-1">
+<div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+<div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+<div class="modal-header bg-dark text-white py-2 no-print">
+<h5 class="modal-title fs-6 fw-bold">🖨️ ตัวอย่างใบรับรถ (A4)</h5>
+<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body p-0" id="printableA4Area">
+<div class="a4-container">
+    <div class="a4-header d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h2 class="a4-title text-uppercase mb-1" style="color:#0284c7;">บริษัท เจเอสวัน ออโต้เวิร์ค จำกัด</h2>
+            <p class="mb-0 text-secondary fw-bold" style="font-size: 13px; line-height: 1.4;">
+                883/4-5 ถนนมิตรภาพ ต.ในเมือง อ.เมือง จ.นครราชสีมา 30000<br>
+                โทร: 044-254-254, 044-244-644, 061-941-6542
+            </p>
+        </div>
+        <div class="text-end">
+            <span class="a4-badge">ใบรับบริการ / ใบรับรถ</span>
+            <div class="mt-2 text-muted fw-bold" style="font-size: 12px;" id="print-doc-date">วันที่สั่งทำ: -</div>
+        </div>
+    </div>
+    <div class="row g-3 mb-3">
+        <div class="col-8">
+            <div class="a4-box h-100">
+                <h6 class="fw-bold text-primary mb-2 border-bottom pb-1" style="font-size: 15px;">🚗 ข้อมูลรถและบริการ</h6>
+                <div class="row g-2" style="font-size: 14px;">
+                    <div class="col-6"><strong>ทะเบียนรถ:</strong> <span id="print-plate" class="text-danger fw-bold fs-5">-</span></div>
+                    <div class="col-6"><strong>ยี่ห้อ/รุ่น:</strong> <span id="print-model" class="fw-bold text-dark">-</span></div>
+                    <div class="col-6"><strong>ทีมช่างรับผิดชอบ:</strong> <span id="print-team" class="fw-bold text-primary">-</span></div>
+                    <div class="col-6"><strong>ผู้รับรถ (CS):</strong> <span id="print-receiver" class="fw-bold text-dark">-</span></div>
+                    <div class="col-12 mt-2"><strong>เวลาที่เข้ารับบริการ:</strong> <span id="print-time-in" class="fw-bold text-info">-</span></div>
+                    <div class="col-12"><strong>กำหนดเวลานัดส่งมอบ:</strong> <span id="print-promised-time" class="fw-bold text-danger">-</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-4 text-center">
+            <div class="a4-box h-100 d-flex flex-column align-items-center justify-content-center">
+                <div class="qr-placeholder-box mb-2" id="print-status-qr-container">
+                    <span class="fw-bold text-dark">QR Code</span>
+                    <span>สแกนเช็กสถานะ</span>
+                </div>
+                <span class="fw-bold text-secondary" style="font-size: 11px;">สแกนเพื่อติดตามสถานะงานซ่อม</span>
+            </div>
+        </div>
+    </div>
+    <div class="a4-box mb-3">
+        <h6 class="fw-bold text-primary mb-2 border-bottom pb-1" style="font-size: 15px;">🛠️ รายการงานซ่อม / บริการที่รับทำ</h6>
+        <div id="print-service-details" class="p-2 bg-white rounded border fw-bold text-dark" style="font-size: 14px; min-height: 80px; white-space: pre-line;">-</div>
+    </div>
+    <div class="a4-box mb-4">
+        <h6 class="fw-bold text-secondary mb-1" style="font-size: 13px;">📌 หมายเหตุเพิ่มเติม</h6>
+        <div id="print-remarks" class="text-muted" style="font-size: 13px;">-</div>
+    </div>
+    <div class="row align-items-center mb-2 p-2 rounded border" style="background-color: #f1f5f9;">
+        <div class="col-8">
+            <h6 class="fw-bold text-dark mb-1" style="font-size: 13px;">📲 ช่องทางการติดตามข่าวสารและสอบถามข้อมูลเพิ่มเติม</h6>
+            <ul class="list-unstyled mb-0 text-secondary fw-semibold" style="font-size: 12px; line-height: 1.5;">
+                <li><strong>LINE Official:</strong> @js1Auto | <strong>Facebook:</strong> JS1Autowork</li>
+                <li><strong>TikTok:</strong> JS1Autowork | <strong>โทร:</strong> 061-941-6542</li>
+            </ul>
+        </div>
+    </div>
+    <div class="text-center my-2 px-2" style="font-size: 10.5px; line-height: 1.4; color: #334155;">
+        <p class="mb-0 fw-semibold">
+            เพื่อป้องกันการสูญหายหรือความเสียหายของทรัพย์สิน กรุณาตรวจสอบและนำทรัพย์สินมีค่าออกจากรถก่อนและหลังเข้ารับบริการ<br>
+            ทางศูนย์บริการขอสงวนสิทธิ์ไม่รับผิดชอบต่อทรัพย์สินส่วนตัวที่ลูกค้าทิ้งไว้ภายในรถ ขอบคุณครับ
+        </p>
+    </div>
+    <div class="row text-center mt-3 pt-1" style="font-size: 12px;">
+        <div class="col-6">
+            <p class="mb-3">ลงชื่อ ........................................................... ผู้รับรถ</p>
+            <p class="fw-bold text-dark">( ........................................................... )</p>
+        </div>
+        <div class="col-6">
+            <p class="mb-3">ลงชื่อ ........................................................... ลูกค้า</p>
+            <p class="fw-bold text-dark">( ........................................................... )</p>
+        </div>
+    </div>
+</div>
+</div>
+<div class="modal-footer py-2 no-print bg-light">
+<button type="button" class="btn btn-secondary btn-sm px-3 fw-bold" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+<button type="button" class="btn btn-success btn-sm px-4 fw-bold shadow-sm" onclick="triggerPrint()">🖨️ สั่งพิมพ์เอกสาร</button>
+</div>
+</div>
+</div>
+</div>
+<div class="modal fade" id="qrCodeStatusModal" tabindex="-1">
+<div class="modal-dialog modal-dialog-centered modal-sm">
+<div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+<div class="modal-header bg-info text-dark py-2">
+<h6 class="modal-title fw-bold">📱 QR Code สแกนเช็กสถานะ</h6>
+<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body text-center p-3">
+<div class="p-2 bg-light rounded border mb-2">
+    <span class="text-muted small">ทะเบียนรถ</span>
+    <h4 class="text-success fw-bold mb-0" id="qr-modal-plate">-</h4>
+</div>
+<div class="d-flex justify-content-center align-items-center my-3">
+    <div id="qrcode-display-area" class="qr-placeholder-box p-2" style="width:160px; height:160px;"></div>
+</div>
+<p class="text-secondary small mb-0 fw-semibold">ให้ลูกค้าสแกนเพื่อตรวจสอบสถานะการซ่อมได้ด้วยตนเอง</p>
+</div>
+<div class="modal-footer py-1">
+<button type="button" class="btn btn-secondary btn-sm px-3 fw-bold w-100" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+</div>
+</div>
+</div>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+const deliveryModal = new bootstrap.Modal(document.getElementById('carDeliveryOptionsModal'));
+const editModal = new bootstrap.Modal(document.getElementById('editTimeModal'));
+const serviceModal = new bootstrap.Modal(document.getElementById('editServiceModal'));
+const waitingModal = new bootstrap.Modal(document.getElementById('editWaitingModal'));
+const remarksModal = new bootstrap.Modal(document.getElementById('editRemarksModal'));
+const confirmCancelModal = new bootstrap.Modal(document.getElementById('confirmCancelModal'));
+const moveTeamModal = new bootstrap.Modal(document.getElementById('moveTeamModal'));
+const quickSearchModal = new bootstrap.Modal(document.getElementById('quickSearchModal'));
+const expandTeamModal = new bootstrap.Modal(document.getElementById('expandTeamModal'));
+const csReportModal = new bootstrap.Modal(document.getElementById('csReportModal'));
+const allJobsModal = new bootstrap.Modal(document.getElementById('allJobsReportModal'));
+const manageJobModal = new bootstrap.Modal(document.getElementById('manageJobModal'));
+const deleteHistoryModal = new bootstrap.Modal(document.getElementById('deleteHistoryModal'));
+const customStatusModal = new bootstrap.Modal(document.getElementById('customStatusModal'));
+const closedJobsModal = new bootstrap.Modal(document.getElementById('closedJobsModal'));
+const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+document.getElementById('filter_date').value = todayStr;
+let globalJobsData = [];
+let currentCsJobsGlobal = [];
+let currentCsNameGlobal = "";
+let currentQuickJobObj = null;
+let newCustomersReportData = [];
+let reworkJobsReportData = [];
+const validPasswords = ['manager1234', 'admins1234', 'admin4321'];
+const servicesDB = {
+    "1. ช่วงล่าง": ["เช็กช่วงล่าง", "เปลี่ยนโช้คอัพ", "เปลี่ยนสปริง", "เปลี่ยนลูกหมาก", "เปลี่ยนบูชปีกนก", "เปลี่ยนปีกนก", "เปลี่ยนลูกปืนล้อ", "เปลี่ยนยางแท่นเครื่อง / แท่นเกียร์", "ตั้งศูนย์ล้อ", "เช็กอาการสั่น", "เช็กรถกินซ้าย-ขวา", "Balance Arm", "Stabilizer Arm", "JS1โตงเตง"],
+    "2. ยาง & ล้อ": ["เปลี่ยนยาง", "สลับยาง", "ปะยาง", "ถ่ายลมไนโตรเจน", "ถ่วงล้อ", "ตั้งศูนย์", "เปลี่ยนแม็ก", "ตรวจเช็กอาการพวงมาลัยสั่น"],
+    "3. ของเหลว": ["เปลี่ยนน้ำมันเครื่อง", "เปลี่ยนไส้กรองน้ำมันเครื่อง", "เปลี่ยนน้ำมันเกียร์", "เปลี่ยนน้ำมันเฟืองท้าย", "เปลี่ยนน้ำมันเบรก", "เปลี่ยนน้ำยาหม้อน้ำ", "เปลี่ยนน้ำมันพวงมาลัยเพาเวอร์", "เปลี่ยนน้ำมันคลัตช์", "ตรวจเช็กระดับของเหลวต่าง ๆ", "ฟลัชชิ่งน้ำมันเครื่อง", "ฟลัชชิ่งระบบเกียร์", "ฟลัชชิ่งระบบหล่อเย็น"],
+    "4. เครื่องยนต์": ["ตรวจเช็กเครื่องยนต์", "ตรวจเช็กไฟโชว์", "ล้างหัวฉีด", "ล้างปีกผีเสื้อ", "ล้างระบบไอดี", "เปลี่ยนหัวเทียน", "เปลี่ยนคอยล์จุดระเบิด", "เปลี่ยนสายพาน", "เปลี่ยนสายพานไทม์มิ่ง", "เปลี่ยนโซ่ราวลิ้น", "เปลี่ยนแท่นเครื่อง", "ตรวจเช็กระบบเกียร์", "ตรวจเช็กอาการเกียร์กระตุก"],
+    "5. ระบบเบรก": ["เปลี่ยนผ้าเบรก", "เปลี่ยนจานเบรก", "เจียรจานเบรก", "เปลี่ยนคาลิปเปอร์", "ไล่น้ำมันเบรก", "เช็กระบบเบรก", "เช็กอาการเบรกสั่น", "เช็กเสียงเบรก", "เช็กระบบเบรก ABS"],
+    "6. แอร์รถยนต์": ["ตรวจเช็กระบบแอร์", "เติมน้ำยาแอร์", "ล้างแอร์", "ล้างคอยล์เย็น", "เปลี่ยนกรองแอร์", "เปลี่ยนคอมเพรสเซอร์แอร์", "เปลี่ยนคอยล์เย็น", "เปลี่ยนคอยล์ร้อน", "ซ่อมแอร์รั่ว", "ตรวจหารอยรั่ว", "เช็กอุณหภูมิ / แรงดันระบบแอร์", "แอร์ไม่เย็น / เย็นช้า / มีกลิ่น", "ล้างแผงคอยล์ร้อน", "เปลี่ยนตู้แอร์", "ฟลัชชิ่้งแอร์"],
+    "7. ระบบไฟฟ้า & แบตเตอรี่": ["เปลี่ยนแบตเตอรี่", "เช็กแบตเตอรี่", "เช็กระบบชาร์จ", "เช็กไดชาร์จ", "เช็กไดสตาร์ท", "เช็กระบบไฟฟ้ารถยนต์", "เช็กระบบไฟส่องสว่าง", "เปลี่ยนแบตไฮบริด", "maintenance แบตไฮบริด"],
+    "8. ชุดแต่ง & อุปกรณ์เสริม": ["ชุดแต่งรอบคัน", "กันชน", "สเกิร์ต", "สปอยเลอร์", "บันไดข้าง", "โรลบาร์", "แร็คหลังคา", "อัพเกรดไฟหน้า", "ติดกล้องรถยนต์" , "คันเร่งไฟฟ้า"],
+    "9. ตรวจเช็ก": ["เช็กสภาพรถ", "เช็กระยะ", "เช็กเดินทางไกล", "เช็กช่วงล่าง", "เช็กเบรก", "เช็กเครื่องยนต์", "เช็กเสียงดัง", "เช็กอาการรถสั่น"],
+    "10. บริการอื่น ๆ": ["เปลี่ยนใบปัดน้ำฝน", "เปลี่ยนหลอดไฟ", "เปลี่ยนกรองอากาศ", "เปลี่ยนกรองแอร์", "เปลี่ยนกรองน้ำมันเชื้อเพลิง", "ทำความสะอาดห้องเครื่อง", "อุปกรณ์และอะไหล่รถยนต์", "ติดฟิล์ม"]
+};
+const receiptPrintModal = new bootstrap.Modal(document.getElementById('receiptPrintModal'));
+const qrCodeStatusModal = new bootstrap.Modal(document.getElementById('qrCodeStatusModal'));
+function quickPopupAction(actionType) {
+    if (!currentQuickJobObj) return;
+    quickSearchModal.hide();
+    if (actionType === 'delivery') {
+        openDeliveryModal(currentQuickJobObj.id, currentQuickJobObj.license_plate, currentQuickJobObj.key_status, currentQuickJobObj.job_status);
+    } else if (actionType === 'editTime') {
+        openEditModal(currentQuickJobObj.id, currentQuickJobObj.promised_date || todayStr, currentQuickJobObj.promised_time || '');
+    } else if (actionType === 'printReceipt') {
+        openReceiptPrintModal(currentQuickJobObj);
+    } else if (actionType === 'generateQR') {
+        openQRCodeStatusModal(currentQuickJobObj);
+    } else if (actionType === 'manage') {
+        promptManageJob(currentQuickJobObj.id, currentQuickJobObj.license_plate, currentQuickJobObj.car_model || '', currentQuickJobObj.receiver || '');
+    }
+}
+function openReceiptPrintModal(job) {
+    document.getElementById('print-doc-date').innerText = `วันที่: ${job.created_date || todayStr}`;
+    document.getElementById('print-plate').innerText = job.license_plate || '-';
+    document.getElementById('print-model').innerText = job.car_model || '-';
+    document.getElementById('print-team').innerText = (!job.team || job.team === '0') ? 'ยังไม่เลือกทีม' : (job.team === 'Subaru' ? 'ทีม Subaru' : 'ทีม ' + job.team);
+    document.getElementById('print-receiver').innerText = job.receiver || '-';
+    document.getElementById('print-time-in').innerText = `${job.created_date || '-'} ${job.time_in ? 'เวลา ' + job.time_in + ' น.' : ''}`;
+    document.getElementById('print-promised-time').innerText = `${job.promised_date || '-'} ${job.promised_time ? 'เวลา ' + job.promised_time + ' น.' : 'ไม่ระบุเวลา'}`;
+    document.getElementById('print-service-details').innerText = job.service_details || '-';
+    document.getElementById('print-remarks').innerText = job.remarks || 'ไม่มีหมายเหตุเพิ่มเติม';
+    const qrContainer = document.getElementById('print-status-qr-container');
+    qrContainer.innerHTML = '';
+    const trackingUrl = `${window.location.origin}/track.html?id=${job.id}`;
+    new QRCode(qrContainer, {
+        text: trackingUrl,
+        width: 100,
+        height: 100,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+    });
+    receiptPrintModal.show();
+}
+function triggerPrint() {
+    window.print();
+}
+function openQRCodeStatusModal(job) {
+    document.getElementById('qr-modal-plate').innerText = job.license_plate;
+    const qrDisplayArea = document.getElementById('qrcode-display-area');
+    qrDisplayArea.innerHTML = '';
+    const trackingUrl = `${window.location.origin}/track.html?id=${job.id}`;
+    new QRCode(qrDisplayArea, {
+        text: trackingUrl,
+        width: 150,
+        height: 150,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+    });
+    qrCodeStatusModal.show();
+}
+function initServices() {
+    const datalistModal = document.getElementById('allServicesListModal');
+    const accordion = document.getElementById('accordionServices');
+    if (!datalistModal || !accordion) return;
+    let accHtml = '';
+    let index = 0;
+    for (const [category, items] of Object.entries(servicesDB)) {
+        items.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item;
+            datalistModal.appendChild(option);
+        });
+        accHtml += `
+        <div class="accordion-item border-0 border-bottom">
+            <h2 class="accordion-header" id="headingModal${index}">
+                <button class="accordion-button collapsed fw-bold text-success py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseModal${index}" style="font-size: 0.9rem; background-color: #f8fafc;">
+                    ${category}
+                </button>
+            </h2>
+            <div id="collapseModal${index}" class="accordion-collapse collapse" data-bs-parent="#accordionServices">
+                <div class="accordion-body p-2 d-flex flex-wrap gap-2 bg-white">
+                    ${items.map(item => `<button type="button" class="btn btn-sm btn-outline-secondary bg-light text-dark border-secondary-subtle py-1 px-3 fw-semibold" style="font-size:0.8rem;" onclick="appendModalService('${item}')">+ ${item}</button>`).join('')}
+                </div>
+            </div>
+        </div>
+        `;
+        index++;
+    }
+    accordion.innerHTML = accHtml;
+}
+function appendModalService(serviceName) {
+    const textarea = document.getElementById('edit_service_details');
+    let currentVal = textarea.value.trim();
+    if(currentVal === '') {
+        textarea.value = serviceName;
+    } else {
+        if(!currentVal.includes(serviceName)) {
+            textarea.value = currentVal + ', ' + serviceName;
+        }
+    }
+    const searchInput = document.getElementById('modalServiceSearchInput');
+    if (searchInput) searchInput.value = '';
+    textarea.style.backgroundColor = '#d1e7dd';
+    setTimeout(() => { textarea.style.backgroundColor = '#fff'; }, 300);
+}
+function handleModalServiceSearch(inputElement) {
+    const val = inputElement.value.trim();
+    if (val) { appendModalService(val); }
+}
+initServices();
+function updateClock() {
+    const now = new Date();
+    const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+    document.getElementById('liveClock').textContent = `🕒 ${now.toLocaleDateString('th-TH', options)}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+function loadJobs() {
+    const selectedDate = document.getElementById('filter_date').value;
+    fetch(`/api/jobs?date=${selectedDate}`)
+        .then(res => res.json())
+        .then(data => {
+            globalJobsData = data.jobs || [];
+            renderPage();
+        })
+        .catch(err => console.error("Error loading jobs:", err));
+}
+function loadWholesaleJobs() {
+    const selectedDate = document.getElementById('filter_date').value;
+    fetch(`/api/wholesale/jobs?date=${selectedDate}`)
+        .then(res => res.json())
+        .then(data => {
+            renderWholesaleTable(data.jobs || []);
+        })
+        .catch(err => console.error("Error loading wholesale jobs:", err));
+}
+function loadReports() {
+    const selectedDate = document.getElementById('filter_date').value;
+    fetch(`/api/reports/new-customers?date=${selectedDate}`)
+        .then(res => res.json())
+        .then(data => {
+            newCustomersReportData = data.records || [];
+        })
+        .catch(err => console.error("Error loading new customers report:", err));
+    fetch(`/api/reports/rework?date=${selectedDate}`)
+        .then(res => res.json())
+        .then(data => {
+            reworkJobsReportData = data.records || [];
+        })
+        .catch(err => console.error("Error loading rework jobs report:", err));
+}
+socket.on('data_updated', () => { 
+    loadJobs(); 
+    loadWholesaleJobs();
+    loadReports();
+});
+function clearSearch() {
+    document.getElementById('search_license_plate').value = '';
+    filterTablesByLicensePlate();
+}
+function renderWholesaleTable(jobs) {
+    const container = document.getElementById('container-wholesale');
+    const tbody = document.getElementById('tbody-wholesale');
+    tbody.innerHTML = '';
+    if (!jobs || jobs.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+    container.style.display = 'block';
+    document.getElementById('total-wholesale').innerText = `รวม: ${jobs.length} รายการ`;
+    jobs.forEach(job => {
+        let currentStatus = job.status || 'รอ';
+        let badgeColor = 'bg-secondary';
+        if (currentStatus === 'รอ') badgeColor = 'bg-secondary';
+        else if (currentStatus.includes('รับเรื่องแล้ว')) badgeColor = 'bg-info text-dark';
+        else if (currentStatus.includes('กำลังจัดอะไหล่')) badgeColor = 'bg-warning text-dark';
+        else if (currentStatus.includes('จัดเสร็จแล้ว')) badgeColor = 'bg-success';
+        else if (currentStatus.includes('ปิดงาน')) badgeColor = 'bg-dark text-white';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="fw-bold text-secondary">${job.created_time || '-'}</td>
+            <td class="fw-bold">${job.receiver}</td>
+            <td class="fw-bold text-dark">${job.customer_name}</td>
+            <td class="text-start">${job.order_details}</td>
+            <td><span class="badge ${badgeColor} shadow-sm" style="font-size:0.7rem;">${currentStatus}</span></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+function renderPage() {
+    document.getElementById('tbody-team-1').innerHTML = '';
+    document.getElementById('tbody-team-2').innerHTML = '';
+    document.getElementById('tbody-team-3').innerHTML = '';
+    document.getElementById('tbody-team-subaru').innerHTML = '';
+    document.getElementById('tbody-unassigned').innerHTML = '';
+    document.getElementById('tbody-pending-payment').innerHTML = '';
+    
+    const urgentContainer = document.getElementById('urgent-container');
+    const wrapperOverdue = document.getElementById('wrapper-overdue');
+    const wrapperUpcoming = document.getElementById('wrapper-upcoming');
+    const listOverdue = document.getElementById('urgent-cards-overdue');
+    const listUpcoming = document.getElementById('urgent-cards-upcoming');
+    listOverdue.innerHTML = '';
+    listUpcoming.innerHTML = '';
+    
+    let overdueCount = 0;
+    let upcomingCount = 0;
+    const now = new Date();
+    const filterDateVal = document.getElementById('filter_date').value;
+    let team1Jobs = [], team2Jobs = [], team3Jobs = [], teamSubaruJobs = [], unassignedJobs = [], pendingPaymentJobs = [];
+    let totalT1Daily = 0, totalT2Daily = 0, totalT3Daily = 0, totalSubaruDaily = 0;
+    let countPending = 0, countUnassigned = 0, countClosed = 0, totalDaily = 0;
+    let countT1 = 0, countT2 = 0, countT3 = 0, countSubaru = 0;
+    let carriedT1 = 0, carriedT2 = 0, carriedT3 = 0, carriedSubaru = 0;
+    
+    globalJobsData.forEach(job => {
+        const cleanTeam = job.team !== undefined && job.team !== null ? String(job.team).trim() : '0';
+        const hasTeam = cleanTeam !== '' && cleanTeam !== '0' && cleanTeam !== 'null' && cleanTeam !== 'undefined';
+        const isCancelled = job.is_cancelled === 1;
+        const teamBadgeText = hasTeam ? (cleanTeam === 'Subaru' ? `[ทีม Subaru]` : `[ทีม ${cleanTeam}]`) : `[ยังไม่เลือกทีม]`;
+        
+        const payStatus = job.custom_status || job.payment_status || '';
+        const isPaid = (payStatus === 'ชำระเงินแล้ว');
+        
+        let jobDeliveredDateStr = "";
+        if (job.delivered_at && job.delivered_at !== 'null') {
+            const offset = 7 * 60 * 60 * 1000;
+            jobDeliveredDateStr = new Date(new Date(job.delivered_at).getTime() + offset).toISOString().split('T')[0];
+        }
+        let isPendingJob = (job.is_cancelled !== 1 && job.is_delivered !== 1 && job.payment_status !== 'ชำระเงินแล้ว');
+        let isRelevantToFilterDate = (job.created_date === filterDateVal) || 
+                                       (job.promised_date === filterDateVal) || 
+                                       (jobDeliveredDateStr === filterDateVal) || 
+                                       isPendingJob;
+        
+        if (!isRelevantToFilterDate) return;
+        
+        if (!isCancelled) {
+            totalDaily++;
+            if (cleanTeam === '1') totalT1Daily++;
+            else if (cleanTeam === '2') totalT2Daily++;
+            else if (cleanTeam === '3') totalT3Daily++;
+            else if (cleanTeam === 'Subaru') totalSubaruDaily++;
+        }
+        
+        if (!isCancelled && job.is_delivered === 1 && !isPaid) {
+            let closedDateStr = jobDeliveredDateStr || (job.promised_date || job.created_date);
+            if (closedDateStr === filterDateVal) {
+                pendingPaymentJobs.push(job);
+            }
+        }
+        
+        if (isCancelled || (job.is_delivered === 1 && isPaid)) {
+            let closedDateStr = jobDeliveredDateStr || (job.promised_date || job.created_date);
+            if (closedDateStr === filterDateVal) {
+                if (!isCancelled && isPaid) { countClosed++; }
+            }
+        } else if (!(job.is_delivered === 1 && !isPaid)) {
+            const isOngoingForToday = (job.created_date === filterDateVal) || (job.promised_date === filterDateVal) || (!job.is_delivered);
+            if (isOngoingForToday) {
+                const isCarriedOver = job.created_date && job.created_date < filterDateVal;
+                if (!hasTeam) {
+                    countUnassigned++;
+                    unassignedJobs.push(job);
+                } else {
+                    countPending++;
+                    if (cleanTeam === '1') { 
+                        team1Jobs.push(job); countT1++; 
+                        if (isCarriedOver) carriedT1++;
+                    }
+                    else if (cleanTeam === '2') { 
+                        team2Jobs.push(job); countT2++; 
+                        if (isCarriedOver) carriedT2++;
+                    }
+                    else if (cleanTeam === '3') { 
+                        team3Jobs.push(job); countT3++; 
+                        if (isCarriedOver) carriedT3++;
+                    }
+                    else if (cleanTeam === 'Subaru') { 
+                        teamSubaruJobs.push(job); countSubaru++; 
+                        if (isCarriedOver) carriedSubaru++;
+                    }
+                    else { 
+                        team1Jobs.push(job); countT1++; 
+                        if (isCarriedOver) carriedT1++;
+                    }
+                }
+            }
+            
+            const isTimeNotSet = (!job.promised_time || job.promised_time === "");
+            if (isTimeNotSet) {
+                const createdDateSafe = job.created_date || filterDateVal;
+                const timeInSafe = job.time_in ? job.time_in : "00:00";
+                const receivedDateTime = new Date(`${createdDateSafe}T${timeInSafe}:00`);
+                const diffMinutes = (now - receivedDateTime) / 1000 / 60;
+                if (diffMinutes >= 30) {
+                    overdueCount++;
+                    const squareCard = document.createElement('div');
+                    squareCard.className = "urgent-card-square";
+                    squareCard.innerHTML = `
+                        <span class="fw-bold text-primary text-truncate w-100" style="font-size:0.6rem;">${teamBadgeText}</span>
+                        <span class="fw-bold text-dark text-truncate w-100" style="font-size:0.7rem;">${job.car_model}</span>
+                        <span class="fw-bold text-danger text-truncate w-100" style="font-size:0.75rem;">${job.license_plate}</span>
+                        <span class="text-warning fw-bold" style="font-size:0.55rem;">เกิน 30น. (ไม่ระบุเวลา)</span>
+                        <button class="btn btn-micro btn-warning fw-bold text-dark w-100 py-1 mt-1" style="font-size:0.6rem;" onclick="openEditModal(${job.id}, '${job.promised_date || filterDateVal}', '')">ระบุเวลา</button>
+                    `;
+                    listOverdue.appendChild(squareCard);
+                }
+            } else if (job.promised_date && job.promised_time) {
+                const targetTime = new Date(`${job.promised_date}T${job.promised_time}`);
+                const diffMinutes = (targetTime - now) / 1000 / 60;
+                if (diffMinutes <= 0 && job.key_status !== 1 && job.job_status !== 1) {
+                    overdueCount++;
+                    const overdueMinutes = Math.abs(Math.ceil(diffMinutes));
+                    const squareCard = document.createElement('div');
+                    squareCard.className = "urgent-card-square";
+                    squareCard.innerHTML = `
+                        <span class="fw-bold text-primary text-truncate w-100" style="font-size:0.6rem;">${teamBadgeText}</span>
+                        <span class="fw-bold text-dark text-truncate w-100" style="font-size:0.7rem;">${job.car_model}</span>
+                        <span class="fw-bold text-danger text-truncate w-100" style="font-size:0.75rem;">${job.license_plate}</span>
+                        <span class="text-danger fw-bold" style="font-size:0.55rem;">เกินมา ${overdueMinutes} นาที</span>
+                        <div class="d-flex gap-1 w-100 mt-1">
+                            <button class="btn btn-micro btn-primary fw-bold text-white w-50 py-1" style="font-size:0.55rem;" onclick="openDeliveryModal(${job.id}, '${job.license_plate}', ${job.key_status}, ${job.job_status})">ส่งรถ</button>
+                            <button class="btn btn-micro btn-warning fw-bold text-dark w-50 py-1" style="font-size:0.55rem;" onclick="openEditModal(${job.id}, '${job.promised_date}', '${job.promised_time}')">เลื่อน</button>
+                        </div>
+                    `;
+                    listOverdue.appendChild(squareCard);
+                } else if (diffMinutes > 0 && diffMinutes <= 30 && job.key_status !== 1 && job.job_status !== 1) {
+                    upcomingCount++;
+                    const remainMinutes = Math.ceil(diffMinutes);
+                    const squareCard = document.createElement('div');
+                    squareCard.className = "urgent-card-square-yellow";
+                    squareCard.innerHTML = `
+                        <span class="fw-bold text-dark text-truncate w-100" style="font-size:0.6rem;">${teamBadgeText}</span>
+                        <span class="fw-bold text-dark text-truncate w-100" style="font-size:0.7rem;">${job.car_model}</span>
+                        <span class="fw-bold text-dark text-truncate w-100" style="font-size:0.75rem;">${job.license_plate}</span>
+                        <span class="text-dark fw-bold" style="font-size:0.55rem;">เหลืออีก ${remainMinutes} นาที</span>
+                        <div class="d-flex gap-1 w-100 mt-1">
+                            <button class="btn btn-micro btn-dark fw-bold text-white w-50 py-1" style="font-size:0.55rem;" onclick="openDeliveryModal(${job.id}, '${job.license_plate}', ${job.key_status}, ${job.job_status})">ส่งรถ</button>
+                            <button class="btn btn-micro btn-warning fw-bold text-dark w-50 py-1" style="font-size:0.55rem;" onclick="openEditModal(${job.id}, '${job.promised_date}', '${job.promised_time}')">เลื่อน</button>
+                        </div>
+                    `;
+                    listUpcoming.appendChild(squareCard);
+                }
+            }
+        }
+    });
+    if (overdueCount > 0 || upcomingCount > 0) {
+        urgentContainer.style.display = "flex";
+        wrapperOverdue.style.display = overdueCount > 0 ? "block" : "none";
+        wrapperUpcoming.style.display = upcomingCount > 0 ? "block" : "none";
+    } else {
+        urgentContainer.style.display = "none";
+    }
+    
+    document.getElementById('summary-total-count').innerText = totalDaily;
+    document.getElementById('summary-pending-count').innerText = countPending;
+    document.getElementById('summary-unassigned-count').innerText = countUnassigned;
+    document.getElementById('summary-closed-count').innerText = countClosed;
+    document.getElementById('total-team-1').innerText = `รวม: ${totalT1Daily} คัน`;
+    document.getElementById('total-team-2').innerText = `รวม: ${totalT2Daily} คัน`;
+    document.getElementById('total-team-3').innerText = `รวม: ${totalT3Daily} คัน`;
+    document.getElementById('badge-team-1').innerText = `กำลังทำ: ${countT1} คัน`;
+    document.getElementById('badge-team-2').innerText = `กำลังทำ: ${countT2} คัน`;
+    document.getElementById('badge-team-3').innerText = `กำลังทำ: ${countT3} คัน`;
+    const updateCarriedBadge = (badgeId, count) => {
+        const el = document.getElementById(badgeId);
+        if (el) {
+            if (count > 0) {
+                el.innerText = `ค้างจากเมื่อวาน: ${count} คัน`;
+                el.style.display = 'inline-block';
+            } else {
+                el.style.display = 'none';
+            }
+        }
+    };
+    updateCarriedBadge('badge-carried-1', carriedT1);
+    updateCarriedBadge('badge-carried-2', carriedT2);
+    updateCarriedBadge('badge-carried-3', carriedT3);
+    updateCarriedBadge('badge-carried-subaru', carriedSubaru);
+    
+    const sortJobsByDelivery = (a, b) => {
+        if (a.is_delivered !== b.is_delivered) return a.is_delivered - b.is_delivered;
+        return a.id - b.id;
+    };
+    team1Jobs.sort(sortJobsByDelivery);
+    team2Jobs.sort(sortJobsByDelivery);
+    team3Jobs.sort(sortJobsByDelivery);
+    teamSubaruJobs.sort(sortJobsByDelivery);
+    unassignedJobs.sort((a, b) => a.id - b.id);
+    
+    team1Jobs.forEach(job => addRowToTable(job, 'tbody-team-1', true));
+    if(team1Jobs.length === 0) showEmptyRow('tbody-team-1', 7);
+    team2Jobs.forEach(job => addRowToTable(job, 'tbody-team-2', true));
+    if(team2Jobs.length === 0) showEmptyRow('tbody-team-2', 7);
+    team3Jobs.forEach(job => addRowToTable(job, 'tbody-team-3', true));
+    if(team3Jobs.length === 0) showEmptyRow('tbody-team-3', 7);
+    
+    const subaruContainer = document.getElementById('container-team-subaru');
+    if (teamSubaruJobs.length > 0) {
+        subaruContainer.style.display = 'block';
+        document.getElementById('total-team-subaru').innerText = `รวม: ${totalSubaruDaily} คัน`;
+        document.getElementById('badge-team-subaru').innerText = `กำลังทำ: ${countSubaru} คัน`;
+        teamSubaruJobs.forEach(job => addRowToTable(job, 'tbody-team-subaru', true));
+    } else {
+        subaruContainer.style.display = 'none';
+    }
+    
+    unassignedJobs.forEach(job => addRowToTable(job, 'tbody-unassigned', false, true));
+    if(unassignedJobs.length === 0) showEmptyRow('tbody-unassigned', 10, "ไม่มีรายการรอเลือกทีม");
+    
+    pendingPaymentJobs.forEach(job => addPendingPaymentRow(job, 'tbody-pending-payment'));
+    if(pendingPaymentJobs.length === 0) showEmptyRow('tbody-pending-payment', 7, "ไม่มีรายการรอชำระเงิน");
+}
+loadJobs();
+loadWholesaleJobs();
+loadReports();
+setInterval(() => { 
+    loadJobs();
+    loadWholesaleJobs();
+    loadReports();
+}, 30000);
+function openClosedJobsModal() {
+    const tbody = document.getElementById('tbody-all-closed-modal');
+    tbody.innerHTML = '';
+    const filterDateVal = document.getElementById('filter_date').value;
+    let closedList = globalJobsData.filter(job => {
+        const isCancelled = job.is_cancelled === 1;
+        const isClosed = (job.payment_status === 'ชำระเงินแล้ว' || job.is_delivered === 1 || isCancelled);
+        if (!isClosed || job.payment_status !== 'ชำระเงินแล้ว') return false;
+        let closedDateStr = "";
+        if (job.delivered_at && job.delivered_at !== 'null') {
+            const offset = 7 * 60 * 60 * 1000;
+            closedDateStr = new Date(new Date(job.delivered_at).getTime() + offset).toISOString().split('T')[0];
+        } else {
+            closedDateStr = job.promised_date || job.created_date;
+        }
+        return closedDateStr === filterDateVal;
+    });
+    if (closedList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-muted py-4 fw-bold">ไม่มีประวัติรายการที่ปิดงานและชำระเงินแล้วในวันที่เลือก</td></tr>`;
+    } else {
+        closedList.forEach(job => {
+            const teamText = !job.team || job.team === '0' ? '-' : (job.team === 'Subaru' ? 'Subaru' : 'ทีม ' + job.team);
+            let closedTimeHtml = '-';
+            if (job.delivered_at && job.delivered_at !== 'null') {
+                const d = new Date(job.delivered_at);
+                closedTimeHtml = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} น.`;
+            } else if (job.is_cancelled === 1) { closedTimeHtml = 'ส่งก่อน'; }
+            const cashierText = job.cashier_name ? `<span class="badge bg-info text-dark fw-bold px-2 py-1" style="font-size:0.68rem;">ผู้รับเงิน: ${job.cashier_name}</span>` : '<span class="text-muted" style="font-size:0.68rem;">-</span>';
+            let receiverTag = job.receiver ? ` <span class="badge bg-light text-dark border" style="font-size:0.55rem;">[${job.receiver}]</span>` : '';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="fw-bold">${teamText}</td>
+                <td>${job.receiver || '-'}</td>
+                <td><span class="fw-bold text-dark">${job.car_model || '-'}</span><br><span class="text-primary fw-bold" style="font-size:0.75rem;">${job.license_plate}</span>${receiverTag}</td>
+                <td class="text-start">${job.service_details || '-'}</td>
+                <td>${closedTimeHtml}</td>
+                <td>${cashierText}</td>
+                <td><span class="badge bg-success" style="font-size:0.65rem;">ชำระแล้ว</span></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+    closedJobsModal.show();
+}
+function showQuickModal(job) {
+    if (job.is_cancelled === 1) return;
+    currentQuickJobObj = job;
+    document.getElementById('q-job-id').value = job.id;
+    document.getElementById('q-plate').innerText = job.license_plate;
+    document.getElementById('q-model').innerText = job.car_model || '-';
+    document.getElementById('q-team').innerText = (!job.team || job.team === '0' || job.team === 'null') ? 'ยังไม่เลือกทีม' : (job.team === 'Subaru' ? 'ทีม Subaru' : 'ทีม ' + job.team);
+    document.getElementById('q-receiver').innerText = job.receiver || '-';
+    document.getElementById('q-service').innerText = job.service_details || '-';
+    const customerTypeContainer = document.getElementById('q-customer-type-container');
+    const customerTypeSpan = document.getElementById('q-customer-type');
+    if (job.customer_type && job.customer_type.trim() !== '') {
+        customerTypeSpan.innerText = job.customer_type;
+        customerTypeContainer.style.display = 'block';
+    } else {
+        customerTypeContainer.style.display = 'none';
+    }
+    document.getElementById('q-time-in').innerText = (job.created_date || '-') + (job.time_in ? ' ' + job.time_in : '');
+    document.getElementById('q-time').innerText = (job.promised_date || '-') + ' ' + (job.promised_time || 'ไม่ระบุเวลา');
+    document.getElementById('q-payment').innerText = job.custom_status || job.payment_status || 'กำลังซ่อม';
+    quickSearchModal.show();
+}
+function openTeamModal(teamNum) {
+    const teamNames = { '1': 'ทีม 1 ช่างญา', '2': 'ทีม 2 ช่างเรศ', '3': 'ทีม 3 ช่างเจตต์', 'Subaru': 'ทีม Subaru' };
+    const headerColors = { '1': 'bg-success', '2': 'bg-success', '3': 'bg-success', 'Subaru': 'bg-primary' };
+    const headerEl = document.getElementById('expandTeamHeader');
+    headerEl.className = `modal-header py-2 text-white ${headerColors[teamNum] || 'bg-secondary'}`;
+    document.getElementById('expandTeamTitle').innerText = `ขยายตารางสถานะ: ${teamNames[teamNum] || 'ทีม ' + teamNum}`;
+    const tbody = document.getElementById('tbody-expand-team');
+    tbody.innerHTML = '';
+    const filterDateVal = document.getElementById('filter_date').value;
+    const teamJobs = globalJobsData.filter(j => {
+        if (String(j.team) !== String(teamNum) || j.is_cancelled === 1 || (j.payment_status === 'ชำระเงินแล้ว')) return false;
+        let deliveredDateStr = "";
+        if (j.delivered_at && j.delivered_at !== 'null') {
+            const offset = 7 * 60 * 60 * 1000;
+            deliveredDateStr = new Date(new Date(j.delivered_at).getTime() + offset).toISOString().split('T')[0];
+        }
+        let isPendingJob = (j.is_cancelled !== 1 && j.is_delivered !== 1 && j.payment_status !== 'ชำระเงินแล้ว');
+        return (j.created_date === filterDateVal) || (j.promised_date === filterDateVal) || (deliveredDateStr === filterDateVal) || (!j.is_delivered) || isPendingJob;
+    });
+    teamJobs.sort((a, b) => a.is_delivered - b.is_delivered);
+    if (teamJobs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-muted py-4 fw-bold">ไม่มีรายการงานที่กำลังดำเนินการในทีมนี้สำหรับวันที่เลือก</td></tr>`;
+    } else {
+        teamJobs.forEach(job => addRowToTable(job, 'tbody-expand-team', true));
+    }
+    expandTeamModal.show();
+}
+function openCSReportModal(csName) {
+    currentCsNameGlobal = csName;
+    document.getElementById('csReportTitle').innerText = `รายงานรายการรับรถโดย: ${csName}`;
+    const tbody = document.getElementById('tbody-cs-report');
+    tbody.innerHTML = '';
+    const filterDateVal = document.getElementById('filter_date').value;
+    const csJobs = globalJobsData.filter(j => {
+        if (j.receiver !== csName) return false;
+        const isCancelled = j.is_cancelled === 1;
+        const createdDate = j.created_date || filterDateVal;
+        let deliveredDateStr = "";
+        if (j.delivered_at && j.delivered_at !== 'null') {
+            const offset = 7 * 60 * 60 * 1000;
+            deliveredDateStr = new Date(new Date(j.delivered_at).getTime() + offset).toISOString().split('T')[0];
+        }
+        let isPendingJob = (j.is_cancelled !== 1 && j.is_delivered !== 1 && j.payment_status !== 'ชำระเงินแล้ว');
+        return (createdDate === filterDateVal) || (j.promised_date === filterDateVal) || (deliveredDateStr === filterDateVal) || isPendingJob;
+    });
+    currentCsJobsGlobal = csJobs;
+    document.getElementById('csReportCount').innerText = `รับรถทั้งหมด: ${csJobs.length} คัน`;
+    let serviceCounts = {};
+    csJobs.forEach(job => {
+        let details = job.service_details || 'อื่นๆ';
+        let parts = details.split(',').map(p => p.trim()).filter(p => p !== '');
+        parts.forEach(part => { serviceCounts[part] = (serviceCounts[part] || 0) + 1; });
+    });
+    let serviceBadgesHtml = '';
+    let totalServiceTypes = Object.keys(serviceCounts).length;
+    document.getElementById('csSummaryBreakdown').innerText = `ประเภทบริการรวม: ${totalServiceTypes} รายการ`;
+    if (totalServiceTypes === 0) {
+        serviceBadgesHtml = '<span class="text-muted">ไม่มีข้อมูลรายการบริการ</span>';
+    } else {
+        for (const [srv, count] of Object.entries(serviceCounts)) {
+            serviceBadgesHtml += `<span class="badge bg-light text-dark border px-2 py-1">${srv}: <strong>${count}</strong> ครั้ง</span>`;
+        }
+    }
+    document.getElementById('csServiceSummaryList').innerHTML = serviceBadgesHtml;
+    if (csJobs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-muted py-4 fw-bold">ไม่พบบันทึกรายการรับรถของผู้รับรถท่านนี้ในวันที่เลือก</td></tr>`;
+    } else {
+        csJobs.forEach(job => addRowToTable(job, 'tbody-cs-report', true));
+    }
+    csReportModal.show();
+}
+function openAllJobsReportModal() {
+    const tbody = document.getElementById('tbody-all-jobs-report');
+    tbody.innerHTML = '';
+    const filterDateVal = document.getElementById('filter_date').value;
+    const allActiveOrClosedJobs = globalJobsData.filter(j => {
+        if (j.is_cancelled === 1) return false;
+        let deliveredDateStr = "";
+        if (j.delivered_at && j.delivered_at !== 'null') {
+            const offset = 7 * 60 * 60 * 1000;
+            deliveredDateStr = new Date(new Date(j.delivered_at).getTime() + offset).toISOString().split('T')[0];
+        }
+        let isPendingJob = (j.is_cancelled !== 1 && j.is_delivered !== 1 && j.payment_status !== 'ชำระเงินแล้ว');
+        return (j.created_date === filterDateVal) || (j.promised_date === filterDateVal) || (deliveredDateStr === filterDateVal) || isPendingJob;
+    });
+    document.getElementById('allJobsTotalCount').innerText = `จำนวนรถทั้งหมด: ${allActiveOrClosedJobs.length} คัน`;
+    let serviceCounts = {};
+    allActiveOrClosedJobs.forEach(job => {
+        let details = job.service_details || 'อื่นๆ';
+        let parts = details.split(',').map(p => p.trim()).filter(p => p !== '');
+        parts.forEach(part => { serviceCounts[part] = (serviceCounts[part] || 0) + 1; });
+    });
+    let serviceBadgesHtml = '';
+    let totalServiceTypes = Object.keys(serviceCounts).length;
+    document.getElementById('allJobsSummaryBreakdown').innerText = `ประเภทบริการรวม: ${totalServiceTypes} รายการ`;
+    if (totalServiceTypes === 0) {
+        serviceBadgesHtml = '<span class="text-muted">ไม่มีข้อมูลรายการบริการ</span>';
+    } else {
+        for (const [srv, count] of Object.entries(serviceCounts)) {
+            serviceBadgesHtml += `<span class="badge bg-light text-dark border px-2 py-1">${srv}: <strong>${count}</strong> ครั้ง</span>`;
+        }
+    }
+    document.getElementById('allJobsServiceSummaryList').innerHTML = serviceBadgesHtml;
+    if (allActiveOrClosedJobs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-muted py-4 fw-bold">ไม่พบข้อมูลการให้บริการในวันที่เลือก</td></tr>`;
+    } else {
+        allActiveOrClosedJobs.forEach(job => {
+            const teamText = !job.team || job.team === '0' ? 'ยังไม่เลือก' : (job.team === 'Subaru' ? 'Subaru' : 'ทีม ' + job.team);
+            const statusText = job.is_delivered === 1 ? 'ส่งเรียบร้อย' : 'กำลังซ่อม';
+            const payText = job.custom_status || job.payment_status || 'กำลังซ่อม';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="fw-bold">${teamText}</td>
+                <td>${job.receiver || '-'}</td>
+                <td><span class="fw-bold text-dark">${job.car_model || '-'}</span><br><span class="text-primary fw-bold" style="font-size:0.75rem;">${job.license_plate}</span></td>
+                <td class="text-start">${job.service_details || '-'}</td>
+                <td>${job.promised_date || '-'}<br>${job.promised_time || ''}</td>
+                <td>${job.waiting_status || '-'}</td>
+                <td><span class="badge bg-secondary" style="font-size:0.65rem;">${statusText}</span></td>
+                <td><span class="badge bg-info text-dark" style="font-size:0.65rem;">${payText}</span></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+    allJobsModal.show();
+}
+function exportCSReportToExcel() {
+    if (!currentCsJobsGlobal || currentCsJobsGlobal.length === 0) {
+        alert("ไม่มีข้อมูลสำหรับส่งออกเป็น Excel");
+        return;
+    }
+    let excelData = currentCsJobsGlobal.map((job, index) => ({
+        "ลำดับ": index + 1,
+        "วันที่รับรถ": job.created_date || '-',
+        "ผู้รับรถ (CS)": job.receiver || '-',
+        "รุ่นรถ": job.car_model || '-',
+        "เลขทะเบียน": job.license_plate || '-',
+        "ทีมช่าง": job.team ? (job.team === 'Subaru' ? 'Subaru' : 'ทีม ' + job.team) : 'ยังไม่เลือกทีม',
+        "รายการซ่อม": job.service_details || '-',
+        "นัดส่ง": `${job.promised_date || '-'} ${job.promised_time || ''}`,
+        "สถานะรอ": job.waiting_status || '-',
+        "สถานะงาน": job.custom_status || job.payment_status || 'กำลังซ่อม',
+        "หมายเหตุ": job.remarks || '-'
+    }));
+    let worksheet = XLSX.utils.json_to_sheet(excelData);
+    let workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "รายงาน CS");
+    XLSX.writeFile(workbook, `CS_Report_${currentCsNameGlobal}_${document.getElementById('filter_date').value}.xlsx`);
+}
+function exportCSReportToImage() {
+    html2canvas(document.getElementById('csReportCaptureArea'), { scale: 2 }).then(canvas => {
+        let link = document.createElement('a');
+        link.download = `CS_Report_${currentCsNameGlobal}_${new Date().toISOString().split('T')[0]}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    });
+}
+function exportAllJobsToExcel() {
+    const filterDateVal = document.getElementById('filter_date').value;
+    const targetJobs = globalJobsData.filter(j => {
+        if (j.is_cancelled === 1) return false;
+        let deliveredDateStr = "";
+        if (j.delivered_at && j.delivered_at !== 'null') {
+            const offset = 7 * 60 * 60 * 1000;
+            deliveredDateStr = new Date(new Date(j.delivered_at).getTime() + offset).toISOString().split('T')[0];
+        }
+        let isPendingJob = (j.is_cancelled !== 1 && j.is_delivered !== 1 && j.payment_status !== 'ชำระเงินแล้ว');
+        return (j.created_date === filterDateVal) || (j.promised_date === filterDateVal) || (deliveredDateStr === filterDateVal) || isPendingJob;
+    });
+    if (targetJobs.length === 0) {
+        alert("ไม่มีข้อมูลสำหรับส่งออกเป็น Excel ในวันที่เลือก");
+        return;
+    }
+    let excelData = targetJobs.map((job, index) => ({
+        "ลำดับ": index + 1,
+        "วันที่": job.created_date || '-',
+        "ทีมช่าง": job.team ? (job.team === 'Subaru' ? 'Subaru' : 'ทีม ' + job.team) : 'ยังไม่เลือก',
+        "ผู้รับรถ (CS)": job.receiver || '-',
+        "รุ่นรถ": job.car_model || '-',
+        "เลขทะเบียน": job.license_plate || '-',
+        "รายการซ่อม": job.service_details || '-',
+        "นัดส่ง": `${job.promised_date || '-'} ${job.promised_time || ''}`,
+        "สถานะรอ": job.waiting_status || '-',
+        "สถานะงาน": job.custom_status || job.payment_status || 'กำลังซ่อม',
+        "หมายเหตุ": job.remarks || '-'
+    }));
+    let worksheet = XLSX.utils.json_to_sheet(excelData);
+    let workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "ภาพรวมทั้งหมด");
+    XLSX.writeFile(workbook, `JS1_Autowork_All_Jobs_${filterDateVal}.xlsx`);
+}
+function exportAllJobsToImage() {
+    html2canvas(document.getElementById('allJobsCaptureArea'), { scale: 2 }).then(canvas => {
+        let link = document.createElement('a');
+        link.download = `JS1_Autowork_Summary_${new Date().toISOString().split('T')[0]}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    });
+}
+function showEmptyRow(tbodyId, cols, text="ไม่มีรถ") {
+    document.getElementById(tbodyId).innerHTML = `<tr><td colspan="${cols}" class="text-muted py-2 fw-bold" style="font-size:0.7rem;">${text}</td></tr>`;
+}
+function openDeliveryModal(id, licensePlate, keyStatus = 0, jobStatus = 0) {
+    document.getElementById('delivery_job_id').value = id;
+    document.getElementById('current_key_status').value = keyStatus;
+    document.getElementById('current_job_status').value = jobStatus;
+    document.getElementById('delivery_license_plate').innerText = licensePlate;
+    const btnKey = document.getElementById('btn-modal-key');
+    const btnJob = document.getElementById('btn-modal-job');
+    const btnBoth = document.getElementById('btn-modal-both');
+    if (keyStatus === 0 && jobStatus === 0) {
+        btnKey.style.display = 'block'; btnKey.className = 'btn btn-outline-primary fw-bold text-start py-2 px-3';
+        btnJob.style.display = 'block'; btnJob.className = 'btn btn-outline-warning text-dark fw-bold text-start py-2 px-3';
+        btnBoth.style.display = 'block';
+    } else if (keyStatus === 1 && jobStatus === 0) {
+        btnKey.style.display = 'none'; btnBoth.style.display = 'none';
+        btnJob.style.display = 'block'; btnJob.className = 'btn btn-success fw-bold text-start py-2 px-3';
+    } else if (keyStatus === 0 && jobStatus === 1) {
+        btnJob.style.display = 'none'; btnBoth.style.display = 'none';
+        btnKey.style.display = 'block'; btnKey.className = 'btn btn-success fw-bold text-start py-2 px-3';
+    }
+    deliveryModal.show();
+}
+function processDelivery(type) {
+    const id = document.getElementById('delivery_job_id').value;
+    let currentKey = parseInt(document.getElementById('current_key_status').value || '0');
+    let currentJob = parseInt(document.getElementById('current_job_status').value || '0');
+    let newKey = currentKey;
+    let newJob = currentJob;
+    if (type === 'key') { newKey = 1; }
+    else if (type === 'job') { newJob = 1; }
+    else if (type === 'both') { newKey = 1; newJob = 1; }
+    let isDelivered = (newKey === 1 && newJob === 1) ? 1 : 0;
+    fetch(`/api/jobs/${id}/deliver-status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key_status: newKey, job_status: newJob, is_delivered: isDelivered })
+    }).then(() => {
+        deliveryModal.hide();
+        loadJobs();
+        if (document.getElementById('csReportModal').classList.contains('show') && currentCsNameGlobal) {
+            openCSReportModal(currentCsNameGlobal);
+        }
+    });
+}
+function openCustomStatusModal(id, currentStatus) {
+    document.getElementById('status_job_id').value = id;
+    
+    // ดึงข้อมูล job ปัจจุบันเพื่อตรวจสอบรายละเอียดอะไหล่จากห้อง spare_parts
+    const jobObj = globalJobsData.find(j => j.id == id);
+    const spareContainer = document.getElementById('spare_details_container');
+    const spareTextEl = document.getElementById('spare_details_text');
+    
+    if (jobObj && jobObj.spare_details && jobObj.spare_details.trim() !== '') {
+        spareTextEl.innerText = jobObj.spare_details;
+        spareContainer.style.display = 'block';
+    } else {
+        spareContainer.style.display = 'none';
+        spareTextEl.innerText = '-';
+    }
+    
+    customStatusModal.show();
+}
+function saveCustomStatus(statusText) {
+    const id = document.getElementById('status_job_id').value;
+    const jobObj = globalJobsData.find(j => j.id == id);
+    if (jobObj) {
+        jobObj.custom_status = statusText;
+    }
+    fetch(`/api/jobs/${id}/custom_status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ custom_status: statusText })
+    }).then(res => {
+        if (!res.ok) {
+            return fetch(`/api/jobs/${id}/payment`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ payment_status: statusText })
+            });
+        }
+        return res.json();
+    }).then(() => {
+        customStatusModal.hide();
+        renderPage();
+    }).catch(err => {
+        console.error("Error updating status:", err);
+        customStatusModal.hide();
+        renderPage();
+    });
+}
+function addRowToTable(job, targetBodyId, isCompactTeam, isUnassigned = false) {
+    const isCancelled = job.is_cancelled === 1;
+    const isClosed = (job.payment_status === 'ชำระเงินแล้ว' || job.is_delivered === 1 || isCancelled);
+    const isClosedClass = isClosed ? 'row-paid' : '';
+    const isDelivered = (job.is_delivered === 1 && !isClosed);
+    const isDeliveredClass = isDelivered ? 'row-delivered' : '';
+    const blinkClass = isUnassigned ? 'row-unassigned-blink' : '';
+    
+    let statusHtml = '';
+    if (isCancelled) {
+        statusHtml = '<span class="fw-bold text-danger" style="font-size:0.65rem;">ส่งก่อน</span>';
+    } else if (job.is_delivered === 1) {
+        statusHtml = '<button class="btn btn-micro btn-success fw-bold w-100 disabled" disabled style="font-size:0.6rem; cursor:default;">ส่งเรียบร้อย</button>';
+    } else if (job.key_status === 1 && job.job_status === 0) {
+        statusHtml = `<button class="btn btn-micro btn-warning text-dark fw-bold w-100 blink-slow-yellow mb-1" style="font-size:0.6rem;" onclick="openDeliveryModal(${job.id}, '${job.license_plate}', ${job.key_status}, ${job.job_status})">ยังไม่ส่ง Job</button>`;
+    } else if (job.key_status === 0 && job.job_status === 1) {
+        statusHtml = `<button class="btn btn-micro btn-info text-dark fw-bold w-100 blink-slow-yellow mb-1" style="font-size:0.6rem;" onclick="openDeliveryModal(${job.id}, '${job.license_plate}', ${job.key_status}, ${job.job_status})">ยังไม่ส่งกุญแจ</button>`;
+    } else {
+        statusHtml = `<button class="btn btn-micro btn-primary fw-bold text-white w-100 mb-1" style="font-size:0.6rem;" onclick="openDeliveryModal(${job.id}, '${job.license_plate}', ${job.key_status}, ${job.job_status})">ส่งรถ</button>`;
+    }
+    const actionHtml = (!isClosed && !job.is_delivered) ? `<button class="btn btn-micro btn-outline-danger fw-bold w-100 py-0 mt-1" style="font-size:0.58rem;" onclick="openCancelModal(${job.id}, '${job.car_model}', '${job.license_plate}')">ส่งรถก่อน</button>` : '';
+    
+    let currentCustomStatus = job.custom_status || (job.payment_status !== 'ชำระเงินแล้ว' ? job.payment_status : 'กำลังซ่อม') || 'กำลังซ่อม';
+    if(currentCustomStatus === 'รอชำระ' || currentCustomStatus === 'ชำระเงินแล้ว') currentCustomStatus = 'กำลังซ่อม';
+    
+    // กำหนดคลาสสีตามสถานะรวมถึงสถานะย่อยของห้องอะไหล่
+    let statusBadgeClass = 'status-badge-repairing';
+    if(currentCustomStatus === 'เสนอราคาแล้ว') statusBadgeClass = 'status-badge-quoting';
+    else if(currentCustomStatus === 'รออนุมัติ') statusBadgeClass = 'status-badge-waiting';
+    else if(currentCustomStatus === 'ติดต่อลูกค้าไม่ได้') statusBadgeClass = 'status-badge-contact';
+    else if(currentCustomStatus === 'รอสั่งอะไหล่') statusBadgeClass = 'status-badge-ordering';
+    else if(currentCustomStatus.includes('สั่งอะไหล่แล้ว')) statusBadgeClass = 'status-badge-ordered';
+    else if(currentCustomStatus.includes('อะไหล่มาถึงแล้ว')) statusBadgeClass = 'status-badge-arrived';
+    else if(currentCustomStatus === 'กำลังซ่อม') statusBadgeClass = 'status-badge-repairing';
+    // จัดรูปแบบสถานะให้ขึ้นบรรทัดใหม่ตรงวงเล็บวันที่ และเอา text-truncate ออกเพื่อให้แสดงผล 2 บรรทัดได้
+    let formattedCustomStatus = currentCustomStatus.replace(' (', '<br>(');
+    let customStatusHtml = isCancelled ? '<span class="badge bg-secondary text-white w-100 py-1 fw-bold" style="font-size:0.6rem;">ส่งก่อน</span>' :
+        `<button class="btn btn-micro ${statusBadgeClass} fw-bold w-100 py-1 shadow-sm border-0" style="font-size:0.56rem; line-height: 1.2;" onclick="openCustomStatusModal(${job.id}, '${currentCustomStatus}')">${formattedCustomStatus}</button>`;
+    
+    const tmrLocal = new Date();
+    tmrLocal.setDate(tmrLocal.getDate() + 1);
+    let displayDateStr = "";
+    let safeDate = job.promised_date || todayStr;
+    if (job.promised_date) {
+        if (job.promised_date === todayStr) displayDateStr = "วันนี้";
+        else if (job.promised_date === tmrLocal.toLocaleDateString('en-CA')) displayDateStr = "พรุ่งนี้";
+        else {
+            const dObj = new Date(job.promised_date);
+            displayDateStr = `${String(dObj.getDate()).padStart(2, '0')}/${String(dObj.getMonth() + 1).padStart(2, '0')}`;
+        }
+    } else { displayDateStr = "วันนี้"; }
+    
+    const filterDateVal = document.getElementById('filter_date').value;
+    const isCarriedOver = job.created_date && job.created_date < filterDateVal;
+    let carriedOverNote = isCarriedOver ? `<br><span class="text-danger fw-bold" style="font-size:0.55rem;">(ค้างจากเมื่อวาน)</span>` : '';
+    const isTimeNotSet = (!job.promised_time || job.promised_time === "" || job.promised_time === "null");
+    let coloredTimeStr = isTimeNotSet ? `<span class="text-time-not-set blink-slow-yellow">ไม่ระบุเวลา</span>` : `<span class="time-clock">${job.promised_time}</span>`;
+    let safePromisedTime = (!isTimeNotSet && job.promised_time) ? job.promised_time : '';
+    let timeDisplay = `<span class="editable-time fw-bold" onclick="openEditModal(${job.id}, '${safeDate}', '${safePromisedTime}')"><span class="time-date">${displayDateStr}</span> <br> ${coloredTimeStr}</span>`;
+    
+    let receiverTag = job.receiver ? ` <span class="badge bg-light text-dark border" style="font-size:0.55rem;">[${job.receiver}]</span>` : '';
+    let serviceDisplay = `<span class="editable-service" id="service-text-${job.id}" onclick="openServiceModal(${job.id})" style="font-size:0.73rem;">${job.service_details}</span>`;
+    
+    let waitingClass = (job.waiting_status === 'ไม่รอรับ') ? 'waiting-status-red' : 'waiting-status-green';
+    let waitingDisplay = `<span class="editable-waiting ${waitingClass}" onclick="openWaitingModal(${job.id}, '${job.waiting_status}')" style="font-size:0.7rem;">${job.waiting_status}</span>`;
+    if (!isUnassigned) {
+        waitingDisplay += `<br><button class="btn btn-micro fw-bold text-dark w-100 mt-1 py-0 shadow-sm" style="background-color: #cbd5e1; border: 1px solid #94a3b8; font-size:0.58rem;" onclick="openMoveTeamModal(${job.id}, '${job.team}', '${job.license_plate}')">ย้ายทีม</button>`;
+    }
+    let remarksDisplay = `<span class="editable-remarks" id="remarks-text-${job.id}" onclick="openRemarksModal(${job.id})" style="font-size:0.6rem;">${job.remarks || '-'}</span>`;
+    if (!isClosed) {
+        remarksDisplay += `<br><button class="btn btn-micro btn-outline-primary w-100 mt-1 py-0 shadow-sm" style="font-size:0.58rem;" onclick="promptManageJob(${job.id}, '${job.license_plate}', '${job.car_model || ''}', '${job.receiver || ''}')">แก้ไข / ลบ</button>`;
+    }
+    
+    const tr = document.createElement('tr');
+    tr.dataset.jobId = job.id;
+    tr.className = `${isDeliveredClass} ${isClosedClass} ${blinkClass}`;
+    if (isCompactTeam) {
+        tr.innerHTML = `<td><span class="fw-bold text-dark">${job.car_model}</span><br><span class="text-primary fw-bold" style="font-size:0.75rem;">${job.license_plate}</span>${carriedOverNote}${receiverTag}</td><td class="text-start">${serviceDisplay}</td><td>${timeDisplay}</td><td>${waitingDisplay}</td><td>${statusHtml}${actionHtml}</td><td>${customStatusHtml}</td><td class="text-start">${remarksDisplay}</td>`;
+    } else if (isUnassigned) {
+        tr.innerHTML = `<td class="fw-bold text-danger">ยังไม่เลือก</td><td class="fw-bold">${job.receiver}</td><td><span class="fw-bold text-dark">${job.car_model}</span><br><span class="text-primary fw-bold" style="font-size:0.75rem;">${job.license_plate}</span>${carriedOverNote}</td><td class="fw-bold">${job.time_in || '-'}</td><td class="text-start">${serviceDisplay}</td><td>${timeDisplay}</td><td>${waitingDisplay}</td><td><button class="btn btn-sm btn-danger fw-bold w-100 py-1 shadow-sm" style="font-size:0.68rem;" onclick="openMoveTeamModal(${job.id}, '0', '${job.license_plate}')">เลือกทีม</button></td><td>${customStatusHtml}</td><td class="text-start">${remarksDisplay}</td>`;
+    }
+    document.getElementById(targetBodyId).appendChild(tr);
+}
+function addPendingPaymentRow(job, targetBodyId) {
+    const teamText = !job.team || job.team === '0' ? '-' : (job.team === 'Subaru' ? 'Subaru' : 'ทีม ' + job.team);
+    const filterDateVal = document.getElementById('filter_date').value;
+    const isCarriedOver = job.created_date && job.created_date < filterDateVal;
+    let carriedOverNote = isCarriedOver ? `<br><span class="text-danger fw-bold" style="font-size:0.55rem;">(ค้างจากเมื่อวาน)</span>` : '';
+    let paymentStatusBadge = `<span class="badge bg-secondary text-white w-100 py-1 fw-bold" style="font-size:0.65rem;">รอชำระเงิน</span>`;
+    const tr = document.createElement('tr');
+    tr.dataset.jobId = job.id;
+    tr.innerHTML = `
+        <td class="fw-bold">${teamText}</td>
+        <td>${job.receiver || '-'}</td>
+        <td><span class="fw-bold text-dark">${job.car_model || '-'}</span><br><span class="text-primary fw-bold" style="font-size:0.7rem;">${job.license_plate}</span>${carriedOverNote}</td>
+        <td class="text-start">${job.service_details}</td>
+        <td>${job.promised_date || '-'}<br>${job.promised_time || ''}</td>
+        <td>${paymentStatusBadge}</td>
+        <td class="text-start">${job.remarks || '-'}</td>
+    `;
+    document.getElementById(targetBodyId).appendChild(tr);
+}
+function promptManageJob(id, licensePlate, carModel, receiver) {
+    document.getElementById('manage_target_id').value = id;
+    document.getElementById('manage_password_input').value = '';
+    document.getElementById('manage_reason_input').value = '';
+    document.getElementById('manage_receiver_input').value = receiver || '';
+    document.getElementById('manage_model_input').value = carModel || '';
+    document.getElementById('manage_plate_input').value = licensePlate || '';
+    document.getElementById('manage_error_msg').style.display = 'none';
+    manageJobModal.show();
+}
+function verifyAndManageJob(actionType) {
+    const passwordInput = document.getElementById('manage_password_input').value.trim();
+    const reasonInput = document.getElementById('manage_reason_input').value.trim();
+    const errorMsg = document.getElementById('manage_error_msg');
+    if (!validPasswords.includes(passwordInput)) {
+        errorMsg.innerText = 'รหัสผ่านไม่ถูกต้อง! กรุณาตรวจสอบ';
+        errorMsg.style.display = 'block';
+        return;
+    }
+    if (reasonInput === '') {
+        errorMsg.innerText = 'กรุณาระบุหมายเหตุ (เหตุผลที่ลบหรือแก้ไข)!';
+        errorMsg.style.display = 'block';
+        return;
+    }
+    const id = document.getElementById('manage_target_id').value;
+    const targetJob = globalJobsData.find(j => j.id == id);
+    if (!targetJob) return;
+    const now = new Date();
+    const currentDateStr = document.getElementById('filter_date').value || todayStr;
+    const actionTimestamp = `${now.toLocaleDateString('th-TH')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')} น.`;
+    let existingHistory = JSON.parse(localStorage.getItem('js1_delete_history') || '[]');
+    const actionText = actionType === 'delete' ? 'ลบรายการ' : 'แก้ไขรายการ';
+    const newReceiver = document.getElementById('manage_receiver_input').value.trim();
+    const newModel = document.getElementById('manage_model_input').value.trim();
+    const newPlate = document.getElementById('manage_plate_input').value.trim();
+    existingHistory.unshift({
+        logDate: currentDateStr,
+        action: actionText,
+        reason: reasonInput,
+        deleted_at: actionTimestamp,
+        team: targetJob.team || '-',
+        receiver: newReceiver || targetJob.receiver || '-',
+        car_model: newModel || targetJob.car_model || '-',
+        license_plate: newPlate || targetJob.license_plate || '-',
+        service_details: targetJob.service_details || '-',
+        promised_date: targetJob.promised_date || '-',
+        promised_time: targetJob.promised_time || 'ไม่ระบุเวลา',
+        remarks: targetJob.remarks || '-'
+    });
+    localStorage.setItem('js1_delete_history', JSON.stringify(existingHistory));
+    if (actionType === 'delete') {
+        fetch(`/api/jobs/${id}`, { method: 'DELETE' }).then(() => {
+            manageJobModal.hide();
+            loadJobs();
+        });
+    } else if (actionType === 'edit') {
+        const updatedRemarks = (targetJob.remarks && targetJob.remarks !== '-' ? targetJob.remarks + ' ' : '') + `[แก้ไข: ${reasonInput}]`;
+        Promise.all([
+            fetch(`/api/jobs/${id}/receiver`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ receiver: newReceiver }) }).catch(() => {}),
+            fetch(`/api/jobs/${id}/model`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ car_model: newModel }) }).catch(() => {}),
+            fetch(`/api/jobs/${id}/plate`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ license_plate: newPlate }) }).catch(() => {}),
+            fetch(`/api/jobs/${id}/remarks`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ remarks: updatedRemarks }) }).catch(() => {})
+        ]).then(() => {
+            return fetch(`/api/jobs/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ receiver: newReceiver, car_model: newModel, license_plate: newPlate, remarks: updatedRemarks })
+            }).catch(() => {});
+        }).then(() => {
+            manageJobModal.hide();
+            loadJobs();
+            if (socket) { socket.emit('data_updated'); }
+        });
+    }
+}
+function openDeleteHistoryModal() {
+    const tbody = document.getElementById('tbody-delete-history');
+    tbody.innerHTML = '';
+    const selectedDate = document.getElementById('filter_date').value || todayStr;
+    let allHistoryList = JSON.parse(localStorage.getItem('js1_delete_history') || '[]');
+    let historyList = allHistoryList.filter(item => item.logDate === selectedDate);
+    document.getElementById('deleteHistoryCount').innerText = `ประวัติลบและแก้ไข (วันที่ ${selectedDate}): ${historyList.length} รายการ`;
+    if (historyList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="text-muted py-4 fw-bold">ยังไม่มีประวัติการลบหรือแก้ไขรายการในวันที่เลือกนี้</td></tr>`;
+    } else {
+        historyList.forEach(item => {
+            let actionBadge = item.action === 'แก้ไขรายการ' ? '<span class="badge bg-warning text-dark">แก้ไข</span>' : '<span class="badge bg-danger">ลบ</span>';
+            tbody.innerHTML += `<tr>
+                <td class="fw-bold text-dark" style="font-size: 0.65rem;">${item.deleted_at}</td>
+                <td>${actionBadge}</td>
+                <td class="text-danger fw-bold text-start" style="font-size: 0.65rem;">${item.reason || '-'}</td>
+                <td><span class="badge bg-secondary" style="font-size: 0.65rem;">${item.team === 'Subaru' ? 'Subaru' : 'ทีม ' + item.team}</span></td>
+                <td style="font-size: 0.68rem;">${item.receiver}</td>
+                <td style="font-size: 0.68rem;"><span class="fw-bold text-dark">${item.car_model}</span><br><span class="text-primary fw-bold">${item.license_plate}</span></td>
+                <td class="text-start text-truncate" style="font-size: 0.68rem; max-width: 150px;">${item.service_details}</td>
+                <td style="font-size: 0.68rem;">${item.promised_date}<br>${item.promised_time}</td>
+                <td class="text-start" style="font-size: 0.65rem;">${item.remarks}</td>
+            </tr>`;
+        });
+    }
+    deleteHistoryModal.show();
+}
+function filterTablesByLicensePlate() {
+    const keyword = document.getElementById('search_license_plate').value.trim().toLowerCase();
+    ['tbody-team-1', 'tbody-team-2', 'tbody-team-3', 'tbody-team-subaru', 'tbody-unassigned', 'tbody-pending-payment', 'tbody-cs-report', 'tbody-wholesale'].forEach(tbodyId => {
+        const tbody = document.getElementById(tbodyId);
+        if (!tbody) return;
+        for (let row of tbody.getElementsByTagName('tr')) {
+            if (row.cells.length <= 1) continue;
+            let foundMatch = Array.from(row.cells).some(cell => cell.innerText.toLowerCase().includes(keyword));
+            row.style.display = (keyword === "" || foundMatch) ? "" : "none";
+        }
+    });
+    if (keyword.length >= 2) {
+        let matchedJob = globalJobsData.find(job => job.license_plate && job.license_plate.toLowerCase().includes(keyword));
+        if (matchedJob) showQuickModal(matchedJob);
+    }
+}
+document.addEventListener('click', function(e) {
+    if (e.target.closest('button') || e.target.closest('a') || e.target.closest('span[class*="editable-"]')) return;
+    const tr = e.target.closest('tr');
+    if (tr && tr.dataset && tr.dataset.jobId) {
+        let job = globalJobsData.find(j => j.id == tr.dataset.jobId);
+        if (job) showQuickModal(job);
+    }
+});
+function openMoveTeamModal(id, currentTeam, licensePlate) {
+    document.getElementById('move_team_id').value = id;
+    document.getElementById('move_team_old').value = currentTeam;
+    document.getElementById('move_team_plate').innerText = licensePlate;
+    document.getElementById('move_team_current').innerText = (!currentTeam || currentTeam === '0' || currentTeam === 'null') ? '(ยังไม่ได้เลือกทีม)' : (currentTeam === 'Subaru' ? '(ปัจจุบันอยู่ทีม Subaru)' : `(ปัจจุบันอยู่ทีม ${currentTeam})`);
+    const select = document.getElementById('move_team_value');
+    select.innerHTML = '';
+    ['1', '2', '3', 'Subaru'].forEach(t => {
+        if (t !== String(currentTeam)) select.innerHTML += `<option value="${t}">${t === 'Subaru' ? 'ทีม Subaru' : 'ทีม ' + t}</option>`;
+    });
+    moveTeamModal.show();
+}
+function executeMoveTeam() {
+    const id = document.getElementById('move_team_id').value;
+    const newTeam = document.getElementById('move_team_value').value;
+    const oldTeam = document.getElementById('move_team_old').value;
+    const currentJob = globalJobsData.find(j => j.id == id);
+    let newRemarks = currentJob.remarks || "";
+    if (oldTeam && oldTeam !== '0' && oldTeam !== 'null') {
+        const moveText = oldTeam === 'Subaru' ? `[ย้ายจากทีม Subaru]` : `[ย้ายจากทีม ${oldTeam}]`;
+        if (!newRemarks.includes(moveText)) newRemarks = newRemarks && newRemarks !== '-' ? moveText + " " + newRemarks : moveText;
+    }
+    fetch(`/api/jobs/${id}/team`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ team: newTeam }) }).then(() => {
+        fetch(`/api/jobs/${id}/remarks`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ remarks: newRemarks }) }).then(() => {
+            moveTeamModal.hide();
+            loadJobs();
+            if (document.getElementById('csReportModal').classList.contains('show') && currentCsNameGlobal) {
+                openCSReportModal(currentCsNameGlobal);
+            }
+        });
+    });
+}
+function openCancelModal(id, carModel, licensePlate) {
+    document.getElementById('cancel_job_id').value = id;
+    document.getElementById('cancel_car_model').innerText = carModel;
+    document.getElementById('cancel_license_plate').innerText = `ทะเบียน: ${licensePlate}`;
+    confirmCancelModal.show();
+}
+function executeCancel() {
+    fetch(`/api/jobs/${document.getElementById('cancel_job_id').value}/cancel`, { method: 'PUT' }).then(() => {
+        confirmCancelModal.hide();
+        loadJobs();
+        if (document.getElementById('csReportModal').classList.contains('show') && currentCsNameGlobal) {
+            openCSReportModal(currentCsNameGlobal);
+        }
+    });
+}
+function openEditModal(id, currentDate, currentTime) {
+    document.getElementById('edit_id').value = id;
+    document.getElementById('edit_date').value = currentDate || todayStr;
+    let timeVal = '';
+    if (currentTime && currentTime !== 'null' && currentTime !== 'ไม่ระบุเวลา' && currentTime !== 'undefined') {
+        timeVal = String(currentTime).substring(0, 5);
+    }
+    document.getElementById('edit_time').value = timeVal;
+    editModal.show();
+}
+function saveNewTime() {
+    const id = document.getElementById('edit_id').value;
+    const newDate = document.getElementById('edit_date').value;
+    const rawTime = document.getElementById('edit_time').value;
+    if (!newDate || !rawTime) { 
+        alert("กรุณากรอกวันที่และเวลานัดส่งให้ครบถ้วน"); 
+        return; 
+    }
+    let formattedTime = rawTime.trim();
+    if (formattedTime.length === 4) {
+        formattedTime = '0' + formattedTime;
+    }
+    fetch(`/api/jobs/${id}/promised`, { 
+        method: 'PUT', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ promised_date: newDate, promised_time: formattedTime }) 
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data && data.error) {
+            alert("บันทึกไม่สำเร็จ: " + data.error);
+        } else {
+            editModal.hide();
+            loadJobs();
+            if (document.getElementById('csReportModal').classList.contains('show') && currentCsNameGlobal) {
+                openCSReportModal(currentCsNameGlobal);
+            }
+        }
+    })
+    .catch(err => {
+        console.error("Error saving time:", err);
+        alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
+    });
+}
+function openServiceModal(id) {
+    document.getElementById('edit_service_id').value = id;
+    document.getElementById('edit_service_details').value = document.getElementById(`service-text-${id}`).innerText;
+    serviceModal.show();
+}
+function saveNewService() {
+    fetch(`/api/jobs/${document.getElementById('edit_service_id').value}/service`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service_details: document.getElementById('edit_service_details').value }) }).then(() => {
+        serviceModal.hide();
+        loadJobs();
+        if (document.getElementById('csReportModal').classList.contains('show') && currentCsNameGlobal) {
+            openCSReportModal(currentCsNameGlobal);
+        }
+    });
+}
+function openWaitingModal(id, currentWaiting) {
+    document.getElementById('edit_waiting_id').value = id;
+    document.getElementById('edit_waiting_value').value = currentWaiting;
+    waitingModal.show();
+}
+function saveNewWaiting() {
+    fetch(`/api/jobs/${document.getElementById('edit_waiting_id').value}/waiting`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ waiting_status: document.getElementById('edit_waiting_value').value }) }).then(() => {
+        waitingModal.hide();
+        loadJobs();
+        if (document.getElementById('csReportModal').classList.contains('show') && currentCsNameGlobal) {
+            openCSReportModal(currentCsNameGlobal);
+        }
+    });
+}
+function openRemarksModal(id) {
+    document.getElementById('edit_remarks_id').value = id;
+    const currentText = document.getElementById(`remarks-text-${id}`).innerText;
+    document.getElementById('edit_remarks_details').value = currentText === '-' ? '' : currentText;
+    remarksModal.show();
+}
+function saveNewRemarks() {
+    fetch(`/api/jobs/${document.getElementById('edit_remarks_id').value}/remarks`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ remarks: document.getElementById('edit_remarks_details').value }) }).then(() => {
+        remarksModal.hide();
+        loadJobs();
+        if (document.getElementById('csReportCodeModal') && document.getElementById('csReportModal').classList.contains('show') && currentCsNameGlobal) {
+            openCSReportModal(currentCsNameGlobal);
+        }
+    });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ติดตามสถานะรถยนต์ - JS1 Autowork</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<!-- SheetJS สำหรับ Export Excel (ถ้าจำเป็น) -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- html2canvas สำหรับแปลง Modal เป็นรูปภาพ -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<style>
+body { background-color: #f1f5f9; color: #0f172a; font-family: 'Segoe UI', Thonburi, sans-serif; }
+.card-custom { border: none; border-radius: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); background: #ffffff; }
+
+/* ดีไซน์ Stepper ความคืบหน้าใหม่ 5 ขั้นตอน */
+.stepper-wrapper { display: flex; justify-content: space-between; position: relative; margin: 15px 0 10px 0; }
+.stepper-wrapper::before { content: ''; position: absolute; top: 14px; left: 8%; width: 84%; height: 3px; background-color: #e2e8f0; z-index: 1; }
+.stepper-item { position: relative; display: flex; flex-direction: column; align-items: center; flex: 1; z-index: 2; text-align: center; }
+.step-counter { width: 30px; height: 30px; border-radius: 50%; background-color: #e2e8f0; color: #64748b; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 0.75rem; margin-bottom: 6px; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: all 0.3s ease; }
+.step-name { font-size: 0.62rem; font-weight: 700; color: #64748b; line-height: 1.2; padding: 0 2px; }
+
+/* สถานะเสร็จสิ้น (Completed) */
+.stepper-item.completed .step-counter { background-color: #0284c7; color: #fff; }
+.stepper-item.completed .step-name { color: #0f172a; }
+
+/* สถานะกำลังดำเนินการ (Active) */
+.stepper-item.active .step-counter { background-color: #10b981; color: #fff; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); transform: scale(1.1); }
+.stepper-item.active .step-name { color: #10b981; font-weight: 800; }
+
+/* สไตล์สำหรับกล่องใบรับรถ A4 ในหน้าเว็บลูกค้า */
+.a4-container { width: 100%; max-width: 210mm; padding: 10mm; margin: 0 auto; background: #ffffff; box-shadow: 0 0 10px rgba(0,0,0,0.1); font-size: 12px; box-sizing: border-box; text-align: left; }
+.a4-header { border-bottom: 2px solid #0284c7; padding-bottom: 8px; margin-bottom: 10px; }
+.a4-title { font-size: 20px; font-weight: 800; color: #0f172a; }
+.a4-box { border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 10px; background-color: #f8fafc; margin-bottom: 10px; }
+.a4-badge { background-color: #0284c7; color: #ffffff; padding: 3px 10px; border-radius: 4px; font-weight: bold; font-size: 12px; }
+</style>
+</head>
+<body class="py-4">
+<div class="container" style="max-width: 650px;">
+    <!-- Header ศูนย์บริการ -->
+    <div class="text-center mb-4">
+        <h4 class="fw-bold text-primary mb-1">บริษัท เจเอสวัน ออโต้เวิร์ค จำกัด</h4>
+        <p class="text-muted small mb-0">ระบบติดตามสถานะงานซ่อมออนไลน์</p>
+    </div>
+
+    <!-- ปุ่มเปิดดูใบรับรถ A4 สำหรับลูกค้า -->
+    <button class="btn btn-success w-100 fw-bold mb-3 shadow-sm py-2 rounded-pill" onclick="openReceiptModal()">
+        📄 ดูใบรับบริการ / ใบรับรถ (A4)
+    </button>
+
+    <!-- Card ข้อมูลรถ -->
+    <div class="card card-custom p-4 mb-3">
+        <div class="text-center mb-3 pb-3 border-bottom">
+            <span class="text-muted small fw-semibold">หมายเลขทะเบียนรถ</span>
+            <h2 class="text-danger fw-bold mb-1" id="t-plate">กำลังโหลด...</h2>
+            <span class="badge bg-light text-dark border px-2 py-1 fw-bold" id="t-model">-</span>
+        </div>
+        <div class="row g-2 text-secondary" style="font-size: 0.88rem;">
+            <div class="col-6"><strong>ผู้รับรถ (CS):</strong> <span id="t-receiver" class="text-dark fw-bold">-</span></div>
+            <div class="col-6"><strong>ทีมช่าง:</strong> <span id="t-team" class="text-dark fw-bold">-</span></div>
+            <div class="col-12 mt-1"><strong>กำหนดนัดส่งมอบ:</strong> <span id="t-promised" class="text-danger fw-bold">-</span></div>
+        </div>
+    </div>
+
+    <!-- Card แสดงขั้นตอนสถานะ (Stepper 5 ขั้นตอนใหม่) -->
+    <div class="card card-custom p-4 mb-3">
+        <h6 class="fw-bold text-dark mb-2">📌 ความคืบหน้าการให้บริการ</h6>
+        
+        <div class="stepper-wrapper">
+            <!-- ขั้นตอนที่ 1 -->
+            <div class="stepper-item" id="step-item-1">
+                <div class="step-counter">1</div>
+                <div class="step-name">รับรถเข้ารับบริการ</div>
+            </div>
+            <!-- ขั้นตอนที่ 2 -->
+            <div class="stepper-item" id="step-item-2">
+                <div class="step-counter">2</div>
+                <div class="step-name">ลูกค้าอนุมัติซ่อม</div>
+            </div>
+            <!-- ขั้นตอนที่ 3 -->
+            <div class="stepper-item" id="step-item-3">
+                <div class="step-counter">3</div>
+                <div class="step-name">กำลังดำเนินการซ่อม</div>
+            </div>
+            <!-- ขั้นตอนที่ 4 -->
+            <div class="stepper-item" id="step-item-4">
+                <div class="step-counter">4</div>
+                <div class="step-name">พร้อมส่งรถ รอชำระเงิน</div>
+            </div>
+            <!-- ขั้นตอนที่ 5 -->
+            <div class="stepper-item" id="step-item-5">
+                <div class="step-counter">5</div>
+                <div class="step-name">ชำระเงินเรียบร้อย</div>
+            </div>
+        </div>
+
+        <div class="text-center mt-3">
+            <span class="badge bg-info bg-opacity-10 text-primary border border-info border-opacity-25 px-3 py-2 fw-bold w-100" id="status-sub-desc" style="font-size: 0.8rem;">กำลังโหลดสถานะ...</span>
+        </div>
+    </div>
+
+    <!-- Card รายการซ่อม -->
+    <div class="card card-custom p-4 mb-3">
+        <h6 class="fw-bold text-dark mb-2">🛠️ รายการงานซ่อม / บริการ</h6>
+        <div class="p-3 bg-light rounded border text-dark fw-semibold" id="t-services" style="font-size: 0.9rem; white-space: pre-line;">
+            -
+        </div>
+    </div>
+
+    <!-- Footer ติดต่อร้าน -->
+    <div class="text-center text-muted small mt-4">
+        <p class="mb-1">📞 โทร: 044-254-254, 044-244-644, 061-941-6542</p>
+        <p class="mb-0">Line Official: @js1Auto | Facebook: JS1Autowork</p>
+    </div>
+</div>
+
+<!-- Modal แสดงตัวอย่างใบรับรถ (A4) และปุ่มดาวน์โหลดรูปภาพ -->
+<div class="modal fade text-dark" id="receiptModal" tabindex="-1">
+<div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+<div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+<div class="modal-header bg-dark text-white py-2">
+<h5 class="modal-title fs-6 fw-bold">📄 ใบรับบริการ / ใบรับรถ (A4)</h5>
+<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body p-2 bg-light text-center" id="printableA4Area">
+<div class="a4-container">
+    <div class="a4-header d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h2 class="a4-title text-uppercase mb-1" style="color:#0284c7;">บริษัท เจเอสวัน ออโต้เวิร์ค จำกัด</h2>
+            <p class="mb-0 text-secondary fw-bold" style="font-size: 12px;">
+                883/4-5 ถนนมิตรภาพ ต.ในเมือง อ.เมือง จ.นครราชสีมา 30000<br>
+                โทร: 044-254-254, 044-244-644, 061-941-6542
+            </p>
+        </div>
+        <div class="text-end">
+            <span class="a4-badge">ใบรับบริการ / ใบรับรถ</span>
+            <div class="mt-2 text-muted fw-bold" style="font-size: 11px;" id="print-doc-date">วันที่: -</div>
+        </div>
+    </div>
+    <div class="row g-2 mb-2">
+        <div class="col-12">
+            <div class="a4-box">
+                <h6 class="fw-bold text-primary mb-2 border-bottom pb-1" style="font-size: 13px;">🚗 ข้อมูลรถและบริการ</h6>
+                <div class="row g-2" style="font-size: 12px;">
+                    <div class="col-6"><strong>ทะเบียนรถ:</strong> <span id="print-plate" class="text-danger fw-bold">-</span></div>
+                    <div class="col-6"><strong>ยี่ห้อ/รุ่น:</strong> <span id="print-model" class="fw-bold text-dark">-</span></div>
+                    <div class="col-6"><strong>ทีมช่าง:</strong> <span id="print-team" class="fw-bold text-primary">-</span></div>
+                    <div class="col-6"><strong>ผู้รับรถ (CS):</strong> <span id="print-receiver" class="fw-bold text-dark">-</span></div>
+                    <div class="col-12"><strong>เวลาที่เข้ารับบริการ:</strong> <span id="print-time-in" class="fw-bold text-info">-</span></div>
+                    <div class="col-12"><strong>กำหนดนัดส่งมอบ:</strong> <span id="print-promised-time" class="fw-bold text-danger">-</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="a4-box mb-2">
+        <h6 class="fw-bold text-primary mb-1" style="font-size: 13px;">🛠️ รายการงานซ่อม / บริการ</h6>
+        <div id="print-service-details" class="p-2 bg-white rounded border fw-bold text-dark" style="font-size: 12px; min-height: 50px; white-space: pre-line;">-</div>
+    </div>
+    <div class="a4-box mb-2">
+        <h6 class="fw-bold text-secondary mb-1" style="font-size: 12px;">📌 หมายเหตุเพิ่มเติม</h6>
+        <div id="print-remarks" class="text-muted" style="font-size: 11px;">-</div>
+    </div>
+    <div class="p-2 rounded border mb-2" style="background-color: #f1f5f9; font-size: 11px;">
+        <strong>📲 ช่องทางติดต่อ:</strong> LINE: @js1Auto | FB: JS1Autowork | โทร: 061-941-6542
+    </div>
+    <div class="text-center my-2" style="font-size: 10px; color: #334155;">
+        <p class="mb-0 fw-semibold">เพื่อป้องกันการสูญหายหรือความเสียหายของทรัพย์สิน กรุณาตรวจสอบและนำทรัพย์สินมีค่าออกจากรถก่อนและหลังเข้ารับบริการ<br>ทางศูนย์บริการขอสงวนสิทธิ์ไม่รับผิดชอบต่อทรัพย์สินส่วนตัวที่ลูกค้าทิ้งไว้ภายในรถ ขอบคุณครับ</p>
+    </div>
+    <div class="row text-center mt-3 pt-2" style="font-size: 11px;">
+        <div class="col-6">
+            <p class="mb-3">ลงชื่อ ........................................................... ผู้รับรถ</p>
+        </div>
+        <div class="col-6">
+            <p class="mb-3">ลงชื่อ ........................................................... ลูกค้า</p>
+        </div>
+    </div>
+</div>
+</div>
+<div class="modal-footer py-2 bg-light d-flex justify-content-between">
+<button type="button" class="btn btn-secondary btn-sm px-3 fw-bold" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+<button type="button" class="btn btn-success btn-sm px-4 fw-bold shadow-sm" onclick="downloadReceiptImage()">📷 บันทึกเป็นรูปภาพ</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Script เชื่อมโยงข้อมูลแบบ Real-time -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+    const receiptModal = new bootstrap.Modal(document.getElementById('receiptModal'));
+    let currentJobDataGlobal = null;
+
+    // ดึง ID จาก URL พารามิเตอร์ เช่น /track.html?id=1
+    const urlParams = new URLSearchParams(window.location.search);
+    const jobId = urlParams.get('id');
+
+    function fetchJobStatus() {
+        if (!jobId) return;
+        fetch(`/api/jobs/track/${jobId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.job) {
+                    const j = data.job;
+                    currentJobDataGlobal = j;
+
+                    document.getElementById('t-plate').innerText = j.license_plate;
+                    document.getElementById('t-model').innerText = j.car_model || '-';
+                    document.getElementById('t-receiver').innerText = j.receiver || '-';
+                    document.getElementById('t-team').innerText = j.team ? (j.team === 'Subaru' ? 'Subaru' : 'ทีม ' + j.team) : 'กำลังจัดทีม';
+                    document.getElementById('t-promised').innerText = `${j.promised_date || '-'} (${j.promised_time || 'ไม่ระบุเวลา'})`;
+                    document.getElementById('t-services').innerText = j.service_details || '-';
+                    
+                    updateStepperUI(j);
+                }
+            })
+            .catch(err => console.error("Error fetching track data:", err));
+    }
+
+    // ฟังก์ชันควบคุมสเตปหน้าจอ 5 ขั้นตอน
+    function updateStepperUI(j) {
+        // Reset ทั้งหมด
+        for (let i = 1; i <= 5; i++) {
+            document.getElementById(`step-item-${i}`).className = 'stepper-item';
+        }
+
+        let activeStep = 3; // ค่าเริ่มต้น (กำลังดำเนินการซ่อม)
+        let descText = 'กำลังดำเนินการซ่อม / ตรวจเช็กตามรายการ';
+
+        // เงื่อนไขการเปลี่ยนสถานะตามข้อมูลจริง
+        if (j.payment_status === 'ชำระเงินแล้ว' || j.is_delivered === 1) {
+            activeStep = 5;
+            descText = 'ชำระเงินเรียบร้อยแล้ว / พร้อมรับรถออก';
+        } else if (j.custom_status === 'รออนุมัติ' || j.custom_status === 'เสนอราคาแล้ว') {
+            activeStep = 2;
+            descText = `สถานะปัจจุบัน: ${j.custom_status} (รอยืนยันการซ่อม)`;
+        } else if (j.custom_status === 'รออะไหล่' || j.custom_status === 'ติดต่อลูกค้าไม่ได้') {
+            activeStep = 3;
+            descText = `สถานะปัจจุบัน: ${j.custom_status}`;
+        } else if (j.custom_status && j.custom_status.includes('พร้อมส่ง')) {
+            activeStep = 4;
+            descText = 'รถซ่อมเสร็จเรียบร้อย พร้อมส่งมอบ (รอชำระเงิน)';
+        } else {
+            activeStep = 3;
+            descText = 'ศูนย์บริการกำลังดำเนินงานซ่อมตามรายการ';
+        }
+
+        // เซ็ตคลาส Active และ Completed ตามสเตป
+        for (let i = 1; i <= 5; i++) {
+            if (i < activeStep) {
+                document.getElementById(`step-item-${i}`).className = 'stepper-item completed';
+            } else if (i === activeStep) {
+                document.getElementById(`step-item-${i}`).className = 'stepper-item active';
+            }
+        }
+        document.getElementById('status-sub-desc').innerText = descText;
+    }
+
+    // ฟังก์ชันเปิด Modal และเติมข้อมูลลงในใบรับรถ A4
+    function openReceiptModal() {
+        if (!currentJobDataGlobal) return;
+        const j = currentJobDataGlobal;
+        document.getElementById('print-doc-date').innerText = `วันที่: ${j.created_date || '-'}`;
+        document.getElementById('print-plate').innerText = j.license_plate || '-';
+        document.getElementById('print-model').innerText = j.car_model || '-';
+        document.getElementById('print-team').innerText = j.team ? (j.team === 'Subaru' ? 'Subaru' : 'ทีม ' + j.team) : 'ยังไม่เลือกทีม';
+        document.getElementById('print-receiver').innerText = j.receiver || '-';
+        document.getElementById('print-time-in').innerText = `${j.created_date || '-'} ${j.time_in ? 'เวลา ' + j.time_in + ' น.' : ''}`;
+        document.getElementById('print-promised-time').innerText = `${j.promised_date || '-'} ${j.promised_time ? 'เวลา ' + j.promised_time + ' น.' : 'ไม่ระบุเวลา'}`;
+        document.getElementById('print-service-details').innerText = j.service_details || '-';
+        document.getElementById('print-remarks').innerText = j.remarks || 'ไม่มีหมายเหตุเพิ่มเติม';
+        receiptModal.show();
+    }
+
+    // ฟังก์ชันแปลง A4 เป็นรูปภาพ PNG และดาวน์โหลดลงเครื่องลูกค้า
+    function downloadReceiptImage() {
+        html2canvas(document.getElementById('printableA4Area'), { scale: 2 }).then(canvas => {
+            let link = document.createElement('a');
+            link.download = `JS1_Receipt_${currentJobDataGlobal ? currentJobDataGlobal.license_plate : 'Car'}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+    }
+
+    fetchJobStatus();
+
+    // อัปเดตข้อมูลแบบเรียลไทม์ผ่าน Socket ทันทีเมื่อฝั่งช่าง/การเงินกดบันทึก
+    socket.on('data_updated', () => {
+        fetchJobStatus();
+    });
+</script>
+</body>
+</html>
